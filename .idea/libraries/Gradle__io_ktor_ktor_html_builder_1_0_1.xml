@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: io.ktor:ktor-html-builder:1.0.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-html-builder/1.0.1/b893650a983e02e6c2d6550cfcca657b092cf3f/ktor-html-builder-1.0.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-html-builder/1.0.1/79d89869b4cbc26734fb2a38b025572b0c8f55b0/ktor-html-builder-1.0.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

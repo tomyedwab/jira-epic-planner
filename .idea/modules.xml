@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/jira-epic-planner.iml" filepath="$PROJECT_DIR$/jira-epic-planner.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jira-epic-planner_main.iml" filepath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_main.iml" group="jira-epic-planner" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jira-epic-planner_test.iml" filepath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_test.iml" group="jira-epic-planner" />
+    </modules>
+  </component>
+</project>

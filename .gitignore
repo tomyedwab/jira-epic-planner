@@ -21,3 +21,12 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+# Don't check in the secrets file
+config/secrets.json
+
+# Generally don't check in built files
+build/
+
+# Don't check in Gradle's cache
+.gradle
