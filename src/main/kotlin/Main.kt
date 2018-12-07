@@ -14,6 +14,8 @@ import io.ktor.http.*
 import io.ktor.http.content.default
 import io.ktor.http.content.files
 import io.ktor.http.content.static
+import io.ktor.http.content.staticRootFolder
+import io.ktor.request.uri
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
@@ -50,26 +52,19 @@ fun main(args: Array<String>) {
     // HTTP client to use to talk to Jira API
     val client = io.ktor.client.HttpClient(Apache)
 
-    val server = embeddedServer(Netty, port = 8080) {
+    val server = embeddedServer(Netty, port = 3001) {
         install(CallLogging) {
             level = Level.INFO
         }
 
         routing {
-            static("static") {
-                files("static/js")
-            }
+            static {
+                staticRootFolder = File("client/build")
+                default("index.html")
 
-            get("/") {
-                call.respondHtml {
-                    head {
-                        title { +"Jira Epic Planner" }
-                        script(src = "/static/main.js") {}
-                    }
-                    body {
-                        p {
-                            +"Hello, Kotlin!"
-                        }
+                static("static") {
+                    static("js") {
+                        files("static/js")
                     }
                 }
             }
