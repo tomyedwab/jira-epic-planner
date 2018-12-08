@@ -52,6 +52,8 @@ fun main(args: Array<String>) {
     // HTTP client to use to talk to Jira API
     val client = io.ktor.client.HttpClient(Apache)
 
+    val cache = HashMap<Int, String>();
+
     val server = embeddedServer(Netty, port = 3001) {
         install(CallLogging) {
             level = Level.INFO
@@ -71,12 +73,18 @@ fun main(args: Array<String>) {
 
             get("/issues") {
                 val startAt: Int = call.request.queryParameters["startAt"]?.toInt() ?: 0
-                val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
-                    body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=CP-719\",\"startAt\":$startAt}", ContentType.Application.Json)
-                    val token = secrets.JiraToken
-                    header("Authorization", "Basic $token")
+                val force: String = call.request.queryParameters["force"] ?: "false"
+                if (force != "true" && cache.containsKey(startAt)) {
+                    call.respondText(cache[startAt]!!, ContentType.Application.Json)
+                } else {
+                    val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
+                        body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=CP-719\",\"startAt\":$startAt}", ContentType.Application.Json)
+                        val token = secrets.JiraToken
+                        header("Authorization", "Basic $token")
+                    }
+                    cache[startAt] = responseText
+                    call.respondText(responseText, ContentType.Application.Json)
                 }
-                call.respondText(responseText, ContentType.Application.Json)
             }
         }
     }
