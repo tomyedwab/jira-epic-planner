@@ -36,6 +36,7 @@ function useIssues() {
 
     function processIssues(issues) {
         const topLevelIssuesMap = {};
+        // All stories are top level issues, put them in first
         issues.forEach(issue => {
             if (issue.fields.issuetype.name === "Story") {
                 topLevelIssuesMap[issue.key] = issue;
@@ -43,6 +44,7 @@ function useIssues() {
             }
         });
         issues.forEach(issue => {
+            // An issue that blocks a story is a child of that story
             let parent = null;
             issue.fields.issuelinks.forEach(link => {
                 if (link.type.name === "Blocks" && link.outwardIssue &&
@@ -51,6 +53,7 @@ function useIssues() {
                     parent = link.outwardIssue.key;
                 }
             });
+            // If the issue isn't a child of a story then it is also a top-level issue
             if (parent && topLevelIssuesMap[parent]) {
                 topLevelIssuesMap[parent].children.push(issue);
             } else {
@@ -58,9 +61,36 @@ function useIssues() {
                 issue.children = [];
             }
         });
+        issues.forEach(issue => {
+            // Look for a custom field that contains sprints
+            issue.sprints = [];
+            Object.keys(issue.fields).forEach(field => {
+                if (issue.fields[field] instanceof Array) {
+                    issue.fields[field].forEach(value => {
+                        if (typeof value === "string") {
+                            const match = value.toLowerCase().match('sprint.sprint@.*name=[^,]+sprint (\\d+)');
+                            if (match) {
+                                let sprint = +match[1];
+                                if (sprint < 5) {
+                                    sprint = 201900 + sprint;
+                                } else {
+                                    sprint = 201800 + sprint;
+                                }
+                                issue.sprints.push(sprint);
+                            }
+                        }
+                    });
+                }
+            });
+        });
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
-            .sort((a, b) => ISSUE_PRIORITIES[a.fields.status.name] - ISSUE_PRIORITIES[b.fields.status.name]));
+            .sort((a, b) => {
+                if (a.fields.status.name !== b.fields.status.name) {
+                    return ISSUE_PRIORITIES[a.fields.status.name] - ISSUE_PRIORITIES[b.fields.status.name];
+                }
+                return Math.max.apply(null, a.sprints) - Math.max.apply(null, b.sprints);
+            }));
         window.TOP_LEVEL_ISSUES = topLevelIssues;
         return topLevelIssues;
     }
@@ -83,14 +113,18 @@ function useIssues() {
 
     return [issues, topLevelIssues, loading, () => setReloadNum(reloadNum + 1)];
 }
-const renderIssue = ([isNested, topLevelIdx, issue], row) => {
+const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints) => {
     const style = {
-        paddingTop: isNested ? 4 : 12,
+        paddingTop: isNested ? 4 : 8,
+        paddingBottom: isLast ? 8 : 4,
         backgroundColor: !!(topLevelIdx % 2) ? "#fff" : "#efefef",
+        color: (issue.fields.status.name === "Done") ? "#aaa": "#000",
+        fontFamily: "'Lato', sans-serif",
+        fontSize: "14px",
     };
-    return [
+    const ret = [
         <div style={{...style, gridColumn: 1, gridRow: row + 1}} key={issue.key + "::0"} />,
-        <div style={{...style, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1}} key={issue.key + "::1"}>
+        <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1}} key={issue.key + "::1"}>
             <img src={ISSUE_ICONS[issue.fields.issuetype.name]} />
             {" "}
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank">{issue.key}</a>
@@ -104,17 +138,23 @@ const renderIssue = ([isNested, topLevelIdx, issue], row) => {
             {issue.fields.status.name}
         </div>,
     ];
+    issue.sprints.forEach((sprint, idx) => {
+        ret.push(<div style={{...style, gridColumn: 7+sortedSprints.indexOf("" + sprint), gridRow: row + 1}} key={issue.key + "::S" + idx}>
+            X
+        </div>);
+    })
+    return ret;
 };
 
 const flattenIssues = (topLevelIssues) => {
     const ret = [];
     topLevelIssues.forEach((issue, idx) => {
-        if (issue.fields.status.name === "Done") {
+        /*if (issue.fields.status.name === "Done") {
             return;
-        }
-        ret.push([false, idx, issue]);
-        issue.children.forEach(subissue => {
-            ret.push([true, idx, subissue]);
+        }*/
+        ret.push([false, issue.children.length === 0, idx, issue]);
+        issue.children.forEach((subissue, subidx) => {
+            ret.push([true, subidx === issue.children.length - 1, idx, subissue]);
         });
     });
     return ret;
@@ -124,10 +164,21 @@ const App = () => {
     const [issues, topLevelIssues, loading, forceReload] = useIssues();
 
     const flattenedIssues = flattenIssues(topLevelIssues);
+    let sprintsMap = {};
+    flattenedIssues.forEach(([_, __, ___, issue]) => {
+        issue.sprints.forEach(sprint => {
+            sprintsMap[sprint] = 1;
+        });
+    });
+    const sortedSprints = Object.keys(sprintsMap).sort();
+    const header = sortedSprints.map((sprint, idx) => <div style={{gridColumn: 7 + idx, gridRow: 1}}>
+        Sprint {sprint % 100}
+    </div>);
 
     return <div>
         <div style={{ display: "grid", gridTemplateColumns: "20px 100px 20px auto 20px auto" }}>
-            {flattenedIssues.map(renderIssue)}
+            {header}
+            {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints))}
         </div>
         <p>
             {loading ? "Loading issues..." : `${issues.length} issues loaded. `}
