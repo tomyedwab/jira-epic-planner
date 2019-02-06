@@ -74,11 +74,12 @@ fun main(args: Array<String>) {
             get("/issues") {
                 val startAt: Int = call.request.queryParameters["startAt"]?.toInt() ?: 0
                 val force: String = call.request.queryParameters["force"] ?: "false"
+                val epic: String = call.request.queryParameters["epic"]!!
                 if (force != "true" && cache.containsKey(startAt)) {
                     call.respondText(cache[startAt]!!, ContentType.Application.Json)
                 } else {
                     val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
-                        body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=CP-719\",\"startAt\":$startAt}", ContentType.Application.Json)
+                        body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=$epic\",\"startAt\":$startAt}", ContentType.Application.Json)
                         val token = secrets.JiraToken
                         header("Authorization", "Basic $token")
                     }

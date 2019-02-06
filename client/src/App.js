@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
+// TODO: Show/hide Done
+// TODO: Freeze top row
+// TODO: Styling for "in progress" issues
 window.ALL_ISSUES = {};
 
 const ISSUE_PRIORITIES = {
     "Done": 0,
-    "In Review": 1,
-    "In Progress": 2,
-    "Dev": 2,
-    "To Do": 100,
+    "In Review": 3000000,
+    "In Progress": 2000000,
+    "Dev": 2000000,
+    "To Do": 1000000,
 };
 
 const ISSUE_ICONS = {
@@ -21,7 +24,7 @@ const ISSUE_ICONS = {
 
 function useIssues() {
     function loadIssues(offset, issues, force) {
-        return fetch(`/issues?startAt=${offset}&force=${force}`)
+        return fetch(`/issues?epic=CP-1834&startAt=${offset}&force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 if (data.issues.length === 0) {
@@ -36,6 +39,7 @@ function useIssues() {
 
     function processIssues(issues) {
         const topLevelIssuesMap = {};
+        let activeSprint = null;
         // All stories are top level issues, put them in first
         issues.forEach(issue => {
             if (issue.fields.issuetype.name === "Story") {
@@ -68,14 +72,20 @@ function useIssues() {
                 if (issue.fields[field] instanceof Array) {
                     issue.fields[field].forEach(value => {
                         if (typeof value === "string") {
-                            const match = value.toLowerCase().match('sprint.sprint@.*name=[^,]+sprint (\\d+)');
-                            if (match) {
-                                let sprint = +match[1];
-                                if (sprint < 5) {
-                                    sprint = 201900 + sprint;
-                                } else {
-                                    sprint = 201800 + sprint;
+                            let sprint = null;
+                            const match1 = value.toLowerCase().match('sprint.sprint@.*name=[^,]+sprint (\\d+-\\d+)');
+                            if (match1) {
+                                sprint = match1[1];
+                                if (value.indexOf("state=ACTIVE") >= 0) {
+                                    activeSprint = sprint;
                                 }
+                            } else {
+                                const match2 = value.toLowerCase().match('sprint.sprint@.*name=[^,]+sprint (\\d+)');
+                                if (match2) {
+                                    sprint = "2018-" + match2[1];
+                                }
+                            }
+                            if (sprint) {
                                 issue.sprints.push(sprint);
                             }
                         }
@@ -86,18 +96,43 @@ function useIssues() {
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
             .sort((a, b) => {
-                if (a.fields.status.name !== b.fields.status.name) {
-                    return ISSUE_PRIORITIES[a.fields.status.name] - ISSUE_PRIORITIES[b.fields.status.name];
+                let pri_a = 0;
+                let pri_b = 0;
+                if (a.fields.status.name === "Done") {
+                    pri_a = 9000000;
+                } else if (a.sprints.indexOf(activeSprint) >= 0) {
+                    pri_a = 5000000;
                 }
-                return Math.max.apply(null, a.sprints) - Math.max.apply(null, b.sprints);
+                pri_a += ISSUE_PRIORITIES[a.fields.status.name];
+                const sprints_a = a.sprints.filter(s => s > activeSprint);
+                if (sprints_a.length > 0) {
+                    pri_a += 999999 - Math.min.apply(null, sprints_a.map(s => +s.replace("-", "")))
+                }
+
+                if (b.fields.status.name === "Done") {
+                    pri_b = 9000000;
+                } else if (b.sprints.indexOf(activeSprint) >= 0) {
+                    pri_b = 5000000;
+                }
+                pri_b += ISSUE_PRIORITIES[b.fields.status.name];
+                const sprints_b = b.sprints.filter(s => s > activeSprint);
+                if (sprints_b.length > 0) {
+                    pri_b += 999999 - Math.min.apply(null, sprints_b.map(s => +s.replace("-", "")))
+                }
+                
+                return pri_b - pri_a;
             }));
         window.TOP_LEVEL_ISSUES = topLevelIssues;
-        return topLevelIssues;
+        return {
+            activeSprint: activeSprint,
+            issues: topLevelIssues,
+        };
     }
 
     const [reloadNum, setReloadNum] = useState(0);
     const [issues, setIssues] = useState([]);
     const [topLevelIssues, setTopLevelIssues] = useState([]);
+    const [activeSprint, setActiveSprint] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -106,23 +141,26 @@ function useIssues() {
         }
         loadIssues(0, [], reloadNum > 0).then(issues => {
             setIssues(issues);
-            setTopLevelIssues(processIssues(issues));
+            const issueInfo = processIssues(issues);
+            setTopLevelIssues(issueInfo.issues);
+            setActiveSprint(issueInfo.activeSprint);
             setLoading(false);
         });
     }, [reloadNum]);
 
-    return [issues, topLevelIssues, loading, () => setReloadNum(reloadNum + 1)];
+    return [issues, topLevelIssues, activeSprint, loading, () => setReloadNum(reloadNum + 1)];
 }
-const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints) => {
+const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints, activeSprintIdx) => {
     const style = {
         paddingTop: isNested ? 4 : 8,
         paddingBottom: isLast ? 8 : 4,
-        backgroundColor: !!(topLevelIdx % 2) ? "#fff" : "#efefef",
         color: (issue.fields.status.name === "Done") ? "#aaa": "#000",
         fontFamily: "'Lato', sans-serif",
         fontSize: "14px",
     };
     const ret = [
+        <div style={{backgroundColor: !!(topLevelIdx % 2) ? "#fff" : "#f8f8f8", gridColumnStart: 1, gridColumnEnd: 7+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
+        <div style={{backgroundColor: "#dfd", gridColumn: 7+activeSprintIdx, gridRow: row + 1}} key={issue.key + "::abg"} />,
         <div style={{...style, gridColumn: 1, gridRow: row + 1}} key={issue.key + "::0"} />,
         <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1}} key={issue.key + "::1"}>
             <img src={ISSUE_ICONS[issue.fields.issuetype.name]} />
@@ -139,7 +177,7 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints)
         </div>,
     ];
     issue.sprints.forEach((sprint, idx) => {
-        ret.push(<div style={{...style, gridColumn: 7+sortedSprints.indexOf("" + sprint), gridRow: row + 1}} key={issue.key + "::S" + idx}>
+        ret.push(<div style={{...style, gridColumn: 7+sortedSprints.indexOf(sprint), gridRow: row + 1}} key={issue.key + "::S" + idx}>
             X
         </div>);
     })
@@ -161,7 +199,7 @@ const flattenIssues = (topLevelIssues) => {
 };
 
 const App = () => {
-    const [issues, topLevelIssues, loading, forceReload] = useIssues();
+    const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues();
 
     const flattenedIssues = flattenIssues(topLevelIssues);
     let sprintsMap = {};
@@ -171,14 +209,29 @@ const App = () => {
         });
     });
     const sortedSprints = Object.keys(sprintsMap).sort();
-    const header = sortedSprints.map((sprint, idx) => <div style={{gridColumn: 7 + idx, gridRow: 1}}>
-        Sprint {sprint % 100}
+    let yearIdx = -1;
+    const sortedYears = [];
+    sortedSprints.forEach((sprint, idx) => {
+        const year = sprint.split("-")[0];
+        if (yearIdx < 0 || sortedYears[yearIdx][0] !== year) {
+            yearIdx++;
+            sortedYears[yearIdx] = [year, idx, 1];
+        } else {
+            sortedYears[yearIdx][2]++;
+        }
+    });
+    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: 7 + yearInfo[1], gridColumnEnd: 8 + yearInfo[1] + yearInfo[2], gridRow: 1}}>
+        {yearInfo[0]}
+    </div>);
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: 7 + idx, gridRow: 2, backgroundColor: sprint === activeSprint ? "#dfd" : "none"}}>
+        {sprint.split("-")[1]}
     </div>);
 
     return <div>
-        <div style={{ display: "grid", gridTemplateColumns: "20px 100px 20px auto 20px auto" }}>
-            {header}
-            {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints))}
+        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px repeat(${sortedSprints.length}, 50px)` }}>
+            {header1}
+            {header2}
+            {flattenedIssues.map((info, row) => renderIssue(info, row+2, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
         <p>
             {loading ? "Loading issues..." : `${issues.length} issues loaded. `}
