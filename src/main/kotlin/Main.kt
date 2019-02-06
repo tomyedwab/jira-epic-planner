@@ -52,7 +52,8 @@ fun main(args: Array<String>) {
     // HTTP client to use to talk to Jira API
     val client = io.ktor.client.HttpClient(Apache)
 
-    val cache = HashMap<Int, String>();
+    var epicsCache: String? = null;
+    val issueCache = HashMap<String, HashMap<Int, String>>();
 
     val server = embeddedServer(Netty, port = 3001) {
         install(CallLogging) {
@@ -71,19 +72,39 @@ fun main(args: Array<String>) {
                 }
             }
 
+            get("/epics") {
+                val force: String = call.request.queryParameters["force"] ?: "false"
+                if (force != "true" && epicsCache != null) {
+                    call.respondText(epicsCache!!, ContentType.Application.Json)
+                } else {
+                    println("Loading epics...")
+                    val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
+                        body = TextContent("{\"jql\":\"Project=CP AND \\\"Epic Name\\\" IS NOT NULL AND \\\"Epic Status\\\" != \\\"Done\\\"\"}", ContentType.Application.Json)
+                        val token = secrets.JiraToken
+                        header("Authorization", "Basic $token")
+                    }
+                    epicsCache = responseText
+                    call.respondText(responseText, ContentType.Application.Json)
+                }
+            }
+
             get("/issues") {
                 val startAt: Int = call.request.queryParameters["startAt"]?.toInt() ?: 0
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 val epic: String = call.request.queryParameters["epic"]!!
-                if (force != "true" && cache.containsKey(startAt)) {
-                    call.respondText(cache[startAt]!!, ContentType.Application.Json)
+                if (force != "true" && issueCache.containsKey(epic) && issueCache[epic]!!.containsKey(startAt)) {
+                    call.respondText(issueCache[epic]!![startAt]!!, ContentType.Application.Json)
                 } else {
+                    println("Loading epic issues for $epic ($startAt)...")
                     val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
                         body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=$epic\",\"startAt\":$startAt}", ContentType.Application.Json)
                         val token = secrets.JiraToken
                         header("Authorization", "Basic $token")
                     }
-                    cache[startAt] = responseText
+                    if (!issueCache.containsKey(epic)) {
+                        issueCache[epic] = HashMap<Int, String>()
+                    }
+                    issueCache[epic]!![startAt] = responseText
                     call.respondText(responseText, ContentType.Application.Json)
                 }
             }

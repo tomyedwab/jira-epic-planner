@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import EpicIssues from './EpicIssues';
 
 const ISSUE_PRIORITIES = {
     "Done": 0,
@@ -8,9 +9,37 @@ const ISSUE_PRIORITIES = {
     "To Do": 1000000,
 };
 
+window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
 
 export function useIssues(epic) {
+    function calcIssuePriority(issue) {
+        let priority = 0;
+        let sprints = [];
+
+        // Primary sort: "Done" at the top, then current sprint, then rest
+        if (issue.fields.status.name === "Done") {
+            priority = 9000000;
+            sprints = issue.sprints;
+        } else if (issue.sprints.indexOf(activeSprint) >= 0) {
+            priority = 5000000;
+            // sprints not relevant
+        } else {
+            // Sort based on first upcoming sprint
+            sprints = issue.sprints.filter(s => s > activeSprint);
+        }
+
+        // Secondary sort: statuses in logical order
+        priority += ISSUE_PRIORITIES[issue.fields.status.name];
+
+        // Tertiary sort: chronological by sprint
+        if (sprints.length > 0) {
+            priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
+        }
+
+        return priority;
+    }
+
     function loadIssues(offset, issues, force) {
         return fetch(`/issues?epic=${epic}&startAt=${offset}&force=${force}`)
             .then(resp => resp.json())
@@ -84,31 +113,7 @@ export function useIssues(epic) {
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
             .sort((a, b) => {
-                let pri_a = 0;
-                let pri_b = 0;
-                if (a.fields.status.name === "Done") {
-                    pri_a = 9000000;
-                } else if (a.sprints.indexOf(activeSprint) >= 0) {
-                    pri_a = 5000000;
-                }
-                pri_a += ISSUE_PRIORITIES[a.fields.status.name];
-                const sprints_a = a.sprints.filter(s => s > activeSprint);
-                if (sprints_a.length > 0) {
-                    pri_a += 999999 - Math.min.apply(null, sprints_a.map(s => +s.replace("-", "")))
-                }
-
-                if (b.fields.status.name === "Done") {
-                    pri_b = 9000000;
-                } else if (b.sprints.indexOf(activeSprint) >= 0) {
-                    pri_b = 5000000;
-                }
-                pri_b += ISSUE_PRIORITIES[b.fields.status.name];
-                const sprints_b = b.sprints.filter(s => s > activeSprint);
-                if (sprints_b.length > 0) {
-                    pri_b += 999999 - Math.min.apply(null, sprints_b.map(s => +s.replace("-", "")))
-                }
-                
-                return pri_b - pri_a;
+                return calcIssuePriority(b) - calcIssuePriority(a);
             }));
         window.TOP_LEVEL_ISSUES = topLevelIssues;
         return {
@@ -137,4 +142,31 @@ export function useIssues(epic) {
     }, [reloadNum]);
 
     return [issues, topLevelIssues, activeSprint, loading, () => setReloadNum(reloadNum + 1)];
+}
+
+export function useEpics() {
+    function loadEpics(force) {
+        return fetch(`/epics?force=${force}`)
+            .then(resp => resp.json())
+            .then(data => {
+                data.issues.forEach(issue => window.ALL_EPICS[issue.key] = issue);
+                return data.issues;
+            });
+    }
+
+    const [reloadNum, setReloadNum] = useState(0);
+    const [epics, setEpics] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!loading) {
+            setLoading(true);
+        }
+        loadEpics(reloadNum > 0).then(epics => {
+            setEpics(epics);
+            setLoading(false);
+        });
+    }, [reloadNum]);
+
+    return [epics, loading, () => setReloadNum(reloadNum + 1)];
 }

@@ -63,7 +63,7 @@ const flattenIssues = (topLevelIssues) => {
 };
 
 export default function EpicIssues(props) {
-    const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic);
+    const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
 
     const flattenedIssues = flattenIssues(topLevelIssues);
     let sprintsMap = {};
@@ -92,7 +92,11 @@ export default function EpicIssues(props) {
     </div>);
 
     return <div>
-        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px repeat(${sortedSprints.length}, 50px)` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto` }}>
+            <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
+                <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
+                {props.epic.key}: {props.epic.fields.customfield_10003}
+            </div>
             {header1}
             {header2}
             {flattenedIssues.map((info, row) => renderIssue(info, row+2, sortedSprints, sortedSprints.indexOf(activeSprint)))}
