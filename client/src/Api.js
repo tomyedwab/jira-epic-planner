@@ -41,7 +41,7 @@ export function useIssues(epic) {
     }
 
     function loadIssues(offset, issues, force) {
-        return fetch(`/issues?epic=${epic}&startAt=${offset}&force=${force}`)
+        return fetch(`/api/issues?epic=${epic}&startAt=${offset}&force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 if (data.issues.length === 0) {
@@ -146,7 +146,7 @@ export function useIssues(epic) {
 
 export function useEpics() {
     function loadEpics(force) {
-        return fetch(`/epics?force=${force}`)
+        return fetch(`/api/epics?force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 data.issues.forEach(issue => window.ALL_EPICS[issue.key] = issue);

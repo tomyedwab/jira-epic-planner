@@ -72,7 +72,7 @@ fun main(args: Array<String>) {
                 }
             }
 
-            get("/epics") {
+            get("/api/epics") {
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 if (force != "true" && epicsCache != null) {
                     call.respondText(epicsCache!!, ContentType.Application.Json)
@@ -88,7 +88,7 @@ fun main(args: Array<String>) {
                 }
             }
 
-            get("/issues") {
+            get("/api/issues") {
                 val startAt: Int = call.request.queryParameters["startAt"]?.toInt() ?: 0
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 val epic: String = call.request.queryParameters["epic"]!!

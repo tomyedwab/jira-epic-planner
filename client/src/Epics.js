@@ -1,5 +1,4 @@
 import React from 'react';
-import {useEpics} from './Api.js';
 
 const renderEpic = (epic, row, selectEpic) => {
     const style = {
@@ -22,7 +21,7 @@ const renderEpic = (epic, row, selectEpic) => {
 }
 
 export default function Epics(props) {
-    const [epics, loading, forceReload] = useEpics();
+    const {epics, loading, forceReload} = props;
 
     return <div>
         <div style={{ display: "grid", gridTemplateColumns: `100px auto auto` }}>
