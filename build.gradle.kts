@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     val kotlinVersion = "1.3.0"
@@ -7,10 +8,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.spring") version kotlinVersion
     id("org.jetbrains.kotlin.plugin.jpa") version kotlinVersion
     id("kotlinx-serialization") version kotlinVersion
+    id("com.github.johnrengelman.shadow") version "4.0.4"
 }
 
 application {
     mainClassName = "main.kotlin.MainKt"
+}
+
+tasks.withType<ShadowJar> {
+    baseName = "main"
+    classifier = ""
+    version = ""
 }
 
 repositories {
