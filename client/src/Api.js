@@ -13,7 +13,7 @@ window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
 
 export function useIssues(epic) {
-    function calcIssuePriority(issue) {
+    function calcIssuePriority(issue, activeSprint) {
         // TODO: Include dependencies in sort
         let priority = 0;
         let sprints = [];
@@ -103,7 +103,7 @@ export function useIssues(epic) {
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
             .sort((a, b) => {
-                return calcIssuePriority(b) - calcIssuePriority(a);
+                return calcIssuePriority(b, activeSprint) - calcIssuePriority(a, activeSprint);
             }));
         window.TOP_LEVEL_ISSUES = topLevelIssues;
         return {
