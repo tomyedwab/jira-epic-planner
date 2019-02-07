@@ -29,7 +29,7 @@ repositories {
 }
 
 dependencies {
-    val ktorVersion = "1.0.1"
+    val ktorVersion = "1.1.2"
     compile("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     compile("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.9.0")
     compile("io.ktor:ktor:$ktorVersion")
