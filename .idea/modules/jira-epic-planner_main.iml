@@ -32,7 +32,7 @@
             <array>
               <option value="$KOTLIN_BUNDLED$/lib/allopen-compiler-plugin.jar" />
               <option value="$KOTLIN_BUNDLED$/lib/noarg-compiler-plugin.jar" />
-              <option value="$APPLICATION_PLUGINS_DIR$/Kotlin/lib/kotlinx-serialization-ide-plugin.jar" />
+              <option value="$KOTLIN_BUNDLED$/lib/kotlinx-serialization-compiler-plugin.jar" />
             </array>
           </option>
         </compilerArguments>

@@ -1,31 +1,19 @@
 package main.kotlin
 
-import com.typesafe.config.Optional
 import io.ktor.application.*
-import io.ktor.client.request.get
 import io.ktor.client.engine.apache.*
-import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.content.TextContent
 import io.ktor.features.CallLogging
-import io.ktor.html.*
 import io.ktor.http.*
-import io.ktor.http.content.default
-import io.ktor.http.content.files
-import io.ktor.http.content.static
-import io.ktor.http.content.staticRootFolder
-import io.ktor.request.uri
+import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import kotlinx.coroutines.*
-import kotlinx.html.*
 import kotlinx.serialization.*
-import kotlinx.serialization.internal.*
 import kotlinx.serialization.json.JSON
-import kotlinx.serialization.json.JsonParsingException
 import java.util.logging.SimpleFormatter
 import java.util.logging.ConsoleHandler
 import java.util.logging.Logger
@@ -64,6 +52,7 @@ fun main(args: Array<String>) {
             static {
                 staticRootFolder = File("client/build")
                 default("index.html")
+                file("*", "index.html")
 
                 static("static") {
                     static("js") {
