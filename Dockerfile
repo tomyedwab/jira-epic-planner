@@ -1,14 +1,17 @@
 FROM gradle:jdk8-alpine as gradle-host
 
 USER root
+WORKDIR /app/
 
 COPY *.gradle.kts /app/
 COPY gradlew /app/
 ADD gradle /app/gradle
+
+# TODO: Install plugins?
+
 COPY src/ /app/src
 
-WORKDIR /app/
-RUN gradle shadowJar --stacktrace --no-daemon
+RUN gradle shadowJar --stacktrace
 
 # ----
 
