@@ -14,6 +14,7 @@ window.ALL_ISSUES = {};
 
 export function useIssues(epic) {
     function calcIssuePriority(issue) {
+        // TODO: Include dependencies in sort
         let priority = 0;
         let sprints = [];
 
@@ -59,28 +60,17 @@ export function useIssues(epic) {
         let activeSprint = null;
         // All stories are top level issues, put them in first
         issues.forEach(issue => {
-            if (issue.fields.issuetype.name === "Story") {
-                topLevelIssuesMap[issue.key] = issue;
-                issue.children = [];
-            }
+            topLevelIssuesMap[issue.key] = issue;
+            issue.fields.subtasks.forEach(subtask => subtask.sprints = []);
+            issue.blockedBy = null;
         });
         issues.forEach(issue => {
-            // An issue that blocks a story is a child of that story
-            let parent = null;
             issue.fields.issuelinks.forEach(link => {
                 if (link.type.name === "Blocks" && link.outwardIssue &&
-                    topLevelIssuesMap[link.outwardIssue.key] &&
-                    topLevelIssuesMap[link.outwardIssue.key].fields.issuetype.name === "Story") {
-                    parent = link.outwardIssue.key;
+                    topLevelIssuesMap[link.outwardIssue.key]) {
+                    topLevelIssuesMap[link.outwardIssue.key].blockedBy = issue;
                 }
             });
-            // If the issue isn't a child of a story then it is also a top-level issue
-            if (parent && topLevelIssuesMap[parent]) {
-                topLevelIssuesMap[parent].children.push(issue);
-            } else {
-                topLevelIssuesMap[issue.key] = issue;
-                issue.children = [];
-            }
         });
         issues.forEach(issue => {
             // Look for a custom field that contains sprints
