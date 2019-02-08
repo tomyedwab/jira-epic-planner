@@ -20,7 +20,7 @@ export function useIssues(epic) {
         let sprints = [];
 
         // Primary sort: "Done" at the top, then current sprint, then rest
-        if (issue.fields.status.name === "Done") {
+        if (issue.status === "Done") {
             priority = 10000000;
             sprints = issue.sprints;
         } else if (issue.sprints.indexOf(activeSprint) >= 0) {
@@ -32,14 +32,19 @@ export function useIssues(epic) {
         }
 
         // Secondary sort: statuses in logical order
-        priority += ISSUE_PRIORITIES[issue.fields.status.name];
+        priority += ISSUE_PRIORITIES[issue.status];
 
         // Tertiary sort: chronological by sprint
         if (sprints.length > 0) {
             priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
-        } else if (issue.fields.status.name === "Done") {
+        } else if (issue.status === "Done") {
             // Assume this was done infinitely far in the past
             priority += 999999;
+        }
+
+        // Quaternary (?) sort: Whether the issue has been assigned
+        if (issue.assignee) {
+            priority += 0.5;
         }
 
         return priority;
