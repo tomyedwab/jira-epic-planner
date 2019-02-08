@@ -16,7 +16,7 @@ const ISSUE_ICONS = {
 
 const SEND = 5;
 
-const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints, activeSprintIdx) => {
+const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprintIdx) => {
     const style = {
         paddingTop: isNested ? 4 : 8,
         paddingBottom: isLast ? 8 : 4,
@@ -25,7 +25,7 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
         fontSize: "14px",
     };
     const ret = [
-        <div style={{backgroundColor: !!(topLevelIdx % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
+        <div style={{backgroundColor: !!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
         <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"}>
             <img src={ISSUE_ICONS[issue.fields.issuetype.name]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
@@ -103,9 +103,9 @@ const flattenIssues = (topLevelIssues, showDone) => {
             countDone += 1;
             return;
         }
-        ret.push([false, issue.fields.subtasks.length === 0, idx, issue]);
+        ret.push([false, issue.fields.subtasks.length === 0, issue]);
         issue.fields.subtasks.forEach((subissue, subidx) => {
-            ret.push([true, subidx === issue.fields.subtasks.length - 1, idx, subissue]);
+            ret.push([true, subidx === issue.fields.subtasks.length - 1, subissue]);
         });
     });
     return [ret, countDone];
@@ -117,7 +117,7 @@ export default function EpicIssues(props) {
 
     const [flattenedIssues, completedIssues] = flattenIssues(topLevelIssues, showDone);
     let sprintsMap = {};
-    flattenedIssues.forEach(([_, __, ___, issue]) => {
+    flattenedIssues.forEach(([_, __, issue]) => {
         issue.sprints.forEach(sprint => {
             sprintsMap[sprint] = 1;
         });
@@ -146,7 +146,7 @@ export default function EpicIssues(props) {
         {sprint.split("-")[1]}
     </div>);
 
-    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 120, paddingTop: 8}}>
+    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
         {showDone ? <a href="#" onClick={() => setShowDone(false)}>Hide completed</a> :
             <a href="#" onClick={() => setShowDone(true)}>Show {completedIssues} completed</a>}
     </div>;
