@@ -14,6 +14,8 @@ const ISSUE_ICONS = {
     "Sub-task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
 };
 
+const SEND = 5;
+
 const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints, activeSprintIdx) => {
     const style = {
         paddingTop: isNested ? 4 : 8,
@@ -23,16 +25,16 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
         fontSize: "14px",
     };
     const ret = [
-        <div style={{backgroundColor: !!(topLevelIdx % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: 7+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
-        <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1}} key={issue.key + "::1"}>
-            <img src={ISSUE_ICONS[issue.fields.issuetype.name]} />
+        <div style={{backgroundColor: !!(topLevelIdx % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
+        <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"}>
+            <img src={ISSUE_ICONS[issue.fields.issuetype.name]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
-            <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank">{issue.key}</a>
-        </div>,
-        <div style={{...style, gridColumnStart: isNested ? 4 : 3, gridColumnEnd: 5, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::3"} title={issue.fields.summary}>
             {issue.fields.summary}
         </div>,
-        <div style={{...style, gridColumnStart: isNested ? 6 : 5, gridColumnEnd: 7, gridRow: row + 1, textAlign: "center"}} key={issue.key + "::5"}>
+        <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.fields.summary}>
+            <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={{verticalAlign: "top"}}>{issue.key}</a>
+        </div>,
+        <div style={{...style, gridColumn: 4, gridColumnEnd: SEND, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::5"}>
             {issue.status}
         </div>,
     ];
@@ -83,7 +85,7 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
     }
 
     spans.forEach((span, idx) => {
-        ret.push(<div style={{gridColumnStart: 7+span.start, gridColumnEnd: 8+span.end, gridRow: row + 1, padding: 4}} key={issue.key + "::S" + idx}>
+        ret.push(<div style={{gridColumnStart: SEND+span.start, gridColumnEnd: SEND+1+span.end, gridRow: row + 1, padding: 4}} key={issue.key + "::S" + idx}>
             <div style={{backgroundColor: issueColor, width: "100%", height: "100%", borderRadius: 16}}>
                 {(idx === spans.length - 1) && issueIcon}
             </div>
@@ -135,22 +137,22 @@ export default function EpicIssues(props) {
     let highlightColumn = null;
     const activeSprintIdx = sortedSprints.indexOf(activeSprint);
     if (activeSprintIdx >= 0) {
-        highlightColumn = <div style={{backgroundColor: "#dfd", gridColumn: 7+activeSprintIdx, gridRowStart: 1, gridRowEnd: 3+flattenedIssues.length}} key={"highlight"} />;
+        highlightColumn = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 3+flattenedIssues.length}} key={"highlight"} />;
     }
-    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: 7 + yearInfo[1], gridColumnEnd: 8 + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
+    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: 8 + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: 7 + idx, gridRow: 2, backgroundColor: sprint === activeSprint ? "#dfd" : "none"}} key={"sprint-" + sprint}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2, backgroundColor: sprint === activeSprint ? "#dfd" : "none"}} key={"sprint-" + sprint}>
         {sprint.split("-")[1]}
     </div>);
 
-    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: 7+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 120, paddingTop: 8}}>
+    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 120, paddingTop: 8}}>
         {showDone ? <a href="#" onClick={() => setShowDone(false)}>Hide completed</a> :
             <a href="#" onClick={() => setShowDone(true)}>Show {completedIssues} completed</a>}
     </div>;
 
     return <div>
-        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length+1}, 35px)` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length+1}, 35px)` }}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
