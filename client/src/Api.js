@@ -37,6 +37,9 @@ export function useIssues(epic) {
         // Tertiary sort: chronological by sprint
         if (sprints.length > 0) {
             priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
+        } else if (issue.fields.status.name === "Done") {
+            // Assume this was done infinitely far in the past
+            priority += 999999;
         }
 
         return priority;

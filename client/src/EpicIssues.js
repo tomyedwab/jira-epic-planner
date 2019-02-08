@@ -77,7 +77,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
         </svg>;
     }
 
-    if (issue.assignee) {
+    if (issue.status !== "Done" && issue.assignee) {
         const initials = issue.assignee.split(" ").map(x => x[0]).join("").toUpperCase();
         issueIcon = <div style={{float: "right", backgroundColor: "#fff", borderRadius: 14, margin: 2, padding: 4, fontSize: "12px", fontWeight: "bold"}}>
             {initials}
