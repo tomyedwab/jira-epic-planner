@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import {useIssues} from './Api.js';
 
-// TODO: Freeze top row
 // TODO: Styling for "in progress" issues
 
 const ISSUE_ICONS = {
@@ -99,9 +98,11 @@ const flattenIssues = (topLevelIssues, showDone) => {
     const ret = [];
     let countDone = 0;
     topLevelIssues.forEach((issue, idx) => {
-        if (!showDone && issue.status === "Done") {
+        if (issue.status === "Done") {
             countDone += 1;
-            return;
+            if (!showDone) {
+                return;
+            }
         }
         ret.push([false, issue.fields.subtasks.length === 0, issue]);
         issue.fields.subtasks.forEach((subissue, subidx) => {
@@ -134,38 +135,51 @@ export default function EpicIssues(props) {
             sortedYears[yearIdx][2]++;
         }
     });
-    let highlightColumn = null;
+    let highlightColumn1 = null;
+    let highlightColumn2 = null;
     const activeSprintIdx = sortedSprints.indexOf(activeSprint);
     if (activeSprintIdx >= 0) {
-        highlightColumn = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 3+flattenedIssues.length}} key={"highlight"} />;
+        highlightColumn1 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 3}} key={"highlight"} />;
+        highlightColumn2 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 1+flattenedIssues.length}} key={"highlight"} />;
     }
-    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: 8 + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
+    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2, backgroundColor: sprint === activeSprint ? "#dfd" : "none"}} key={"sprint-" + sprint}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2}} key={"sprint-" + sprint}>
         {sprint.split("-")[1]}
     </div>);
 
-    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
-        {showDone ? <a href="#" onClick={() => setShowDone(false)}>Hide completed</a> :
-            <a href="#" onClick={() => setShowDone(true)}>Show {completedIssues} completed</a>}
+    let headerContent = "Loading issues...";
+    if (!loading) {
+        const totalIssues = issues.length;
+        const visibleIssues = showDone ? totalIssues : totalIssues - completedIssues;
+        headerContent = [
+            <span>{`Showing ${visibleIssues} out of ${totalIssues} issues.`}</span>,
+            " ",
+            showDone && <a href="#" onClick={() => setShowDone(false)}>Hide completed</a>,
+            !showDone && (completedIssues > 0) && <a href="#" onClick={() => setShowDone(true)}>Show completed</a>,
+            " ",
+            <a href="#" onClick={forceReload}>Reload</a>,
+        ];
+    }
+    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 1, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
+        {headerContent}
     </div>;
 
-    return <div>
-        <div style={{ display: "grid", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length+1}, 35px)` }}>
+    return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
+        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 37px"}}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
             </div>
-            {highlightColumn}
+            {highlightColumn1}
             {header1}
             {header2}
-            {header3}
-            {flattenedIssues.map((info, row) => renderIssue(info, row+3, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
-        <p>
-            {loading ? "Loading issues..." : `${issues.length} issues loaded. `}
-            {!loading && <button onClick={forceReload}>Reload</button>}
-        </p>
+        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
+            {highlightColumn2}
+            {header3}
+            {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints, sortedSprints.indexOf(activeSprint)))}
+        </div>
     </div>;
 }
