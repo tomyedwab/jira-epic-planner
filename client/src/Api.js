@@ -64,6 +64,8 @@ export function useIssues(epic) {
             topLevelIssuesMap[issue.key] = issue;
             issue.fields.subtasks.forEach(subtask => subtask.sprints = []);
             issue.blockedBy = null;
+            issue.assignee = (issue.fields.assignee || {}).displayName;
+            issue.status = issue.fields.status.name;
         });
         issues.forEach(issue => {
             issue.fields.issuelinks.forEach(link => {

@@ -18,7 +18,7 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
     const style = {
         paddingTop: isNested ? 4 : 8,
         paddingBottom: isLast ? 8 : 4,
-        color: (issue.fields.status.name === "Done") ? "#aaa": "#000",
+        color: (issue.status === "Done") ? "#aaa": "#000",
         fontFamily: "'Lato', sans-serif",
         fontSize: "14px",
     };
@@ -33,7 +33,7 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
             {issue.fields.summary}
         </div>,
         <div style={{...style, gridColumnStart: isNested ? 6 : 5, gridColumnEnd: 7, gridRow: row + 1, textAlign: "center"}} key={issue.key + "::5"}>
-            {issue.fields.status.name}
+            {issue.status}
         </div>,
     ];
 
@@ -59,20 +59,27 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
     let issueColor = "#ccc";
     let issueIcon = null;
 
-    if (issue.fields.status.name === "Done") {
+    if (issue.status === "Done") {
         issueColor = "#00a60e";
         issueIcon = <svg viewBox="-6 -6 60 60" width={"24px"} height={"24px"} style={{verticalAlign: "top", float: "right", marginRight: 8}}>
             <polygon fill="#ffffff" points="40.6,12.1 17,35.7 7.4,26.1 4.6,31 17,43.3 43.4,16.9"/>
         </svg>;
+    } else if (issue.status === "In Progress" || issue.status === "Dev") {
+        issueColor = "#1865f2";
+    } else if (issue.status === "In Review" || issue.status === "Awaiting Deploy") {
+        issueColor = "#9059ff";
     } else if (issue.blockedBy) {
         issueColor = "#d92916";
         issueIcon = <svg viewBox="0 0 512 512" width={"20px"} height={"20px"} style={{verticalAlign: "top", float: "right", marginRight: 8, marginTop: 3}}>
             <path d="M501.35,369.069L320.565,66.266c-13.667-23.008-37.805-36.749-64.567-36.749c-26.762,0-50.9,13.741-64.567,36.749    L10.662,369.069c-13.96,23.492-14.224,51.706-0.719,75.462c13.536,23.771,37.922,37.951,65.27,37.951h361.57    c27.348,0,51.736-14.18,65.27-37.951C515.56,420.776,515.296,392.561,501.35,369.069z M255.999,122.094    c16.587,0,30.032,13.445,30.032,30.032v120.13c0,16.585-13.445,30.032-30.032,30.032c-16.587,0-30.032-13.448-30.032-30.032    v-120.13h0C225.966,135.539,239.412,122.094,255.999,122.094z M255.999,422.417c-24.841,0-45.049-20.208-45.049-45.049    c0-24.841,20.208-45.049,45.049-45.049c24.841,0,45.049,20.208,45.049,45.049C301.047,402.21,280.84,422.417,255.999,422.417z" fill="#ffffff" />
         </svg>;
-    } else if (issue.fields.status.name === "In Progress" || issue.fields.status.name === "Dev") {
-        issueColor = "#1865f2";
-    } else if (issue.fields.status.name === "In Review") {
-        issueColor = "#9059ff";
+    }
+
+    if (issue.assignee) {
+        const initials = issue.assignee.split(" ").map(x => x[0]).join("").toUpperCase();
+        issueIcon = <div style={{float: "right", backgroundColor: "#fff", borderRadius: 14, margin: 2, padding: 4, fontSize: "12px", fontWeight: "bold"}}>
+            {initials}
+        </div>;
     }
 
     spans.forEach((span, idx) => {
@@ -90,7 +97,7 @@ const flattenIssues = (topLevelIssues, showDone) => {
     const ret = [];
     let countDone = 0;
     topLevelIssues.forEach((issue, idx) => {
-        if (!showDone && issue.fields.status.name === "Done") {
+        if (!showDone && issue.status === "Done") {
             countDone += 1;
             return;
         }
