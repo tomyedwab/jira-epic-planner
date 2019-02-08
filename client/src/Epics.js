@@ -8,8 +8,10 @@ const renderEpic = (epic, row, selectEpic) => {
         fontSize: "14px",
     };
     return [
-        <div style={{...style, gridColumn: 1, gridRow: row + 1}} key={epic.key + "::1"} onClick={selectEpic}>
-            {epic.key}
+        <div style={{...style, gridColumn: 1, gridRow: row + 1}} key={epic.key + "::1"}>
+            <a href={`/${epic.key}`} onClick={e => { selectEpic(); e.preventDefault(); }}>
+                {epic.key}
+            </a>
         </div>,
         <div style={{...style, gridColumn: 2, gridRow: row + 1}} key={epic.key + "::2"}>
             {epic.fields.customfield_10003}
