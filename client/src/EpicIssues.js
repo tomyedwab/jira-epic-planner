@@ -1,7 +1,6 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {useIssues} from './Api.js';
 
-// TODO: Show/hide Done
 // TODO: Freeze top row
 // TODO: Styling for "in progress" issues
 
@@ -87,24 +86,27 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
     return ret;
 };
 
-const flattenIssues = (topLevelIssues) => {
+const flattenIssues = (topLevelIssues, showDone) => {
     const ret = [];
+    let countDone = 0;
     topLevelIssues.forEach((issue, idx) => {
-        /*if (issue.fields.status.name === "Done") {
+        if (!showDone && issue.fields.status.name === "Done") {
+            countDone += 1;
             return;
-        }*/
+        }
         ret.push([false, issue.fields.subtasks.length === 0, idx, issue]);
         issue.fields.subtasks.forEach((subissue, subidx) => {
             ret.push([true, subidx === issue.fields.subtasks.length - 1, idx, subissue]);
         });
     });
-    return ret;
+    return [ret, countDone];
 };
 
 export default function EpicIssues(props) {
     const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
+    const [showDone, setShowDone] = useState(false);
 
-    const flattenedIssues = flattenIssues(topLevelIssues);
+    const [flattenedIssues, completedIssues] = flattenIssues(topLevelIssues, showDone);
     let sprintsMap = {};
     flattenedIssues.forEach(([_, __, ___, issue]) => {
         issue.sprints.forEach(sprint => {
@@ -135,8 +137,13 @@ export default function EpicIssues(props) {
         {sprint.split("-")[1]}
     </div>);
 
+    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: 7+sortedSprints.length, gridRow: 3, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 120, paddingTop: 8}}>
+        {showDone ? <a href="#" onClick={() => setShowDone(false)}>Hide completed</a> :
+            <a href="#" onClick={() => setShowDone(true)}>Show {completedIssues} completed</a>}
+    </div>;
+
     return <div>
-        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length}, 35px)` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length+1}, 35px)` }}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
@@ -144,7 +151,8 @@ export default function EpicIssues(props) {
             {highlightColumn}
             {header1}
             {header2}
-            {flattenedIssues.map((info, row) => renderIssue(info, row+2, sortedSprints, sortedSprints.indexOf(activeSprint)))}
+            {header3}
+            {flattenedIssues.map((info, row) => renderIssue(info, row+3, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
         <p>
             {loading ? "Loading issues..." : `${issues.length} issues loaded. `}
