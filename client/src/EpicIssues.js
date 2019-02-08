@@ -30,10 +30,10 @@ const renderIssue = ([isNested, isLast, topLevelIdx, issue], row, sortedSprints,
             {" "}
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank">{issue.key}</a>
         </div>,
-        <div style={{...style, gridColumnStart: isNested ? 4 : 3, gridColumnEnd: 5, gridRow: row + 1}} key={issue.key + "::3"}>
+        <div style={{...style, gridColumnStart: isNested ? 4 : 3, gridColumnEnd: 5, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::3"} title={issue.fields.summary}>
             {issue.fields.summary}
         </div>,
-        <div style={{...style, gridColumnStart: isNested ? 6 : 5, gridColumnEnd: 7, gridRow: row + 1}} key={issue.key + "::5"}>
+        <div style={{...style, gridColumnStart: isNested ? 6 : 5, gridColumnEnd: 7, gridRow: row + 1, textAlign: "center"}} key={issue.key + "::5"}>
             {issue.fields.status.name}
         </div>,
     ];
@@ -136,7 +136,7 @@ export default function EpicIssues(props) {
     </div>);
 
     return <div>
-        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `20px 100px 20px auto 20px 100px repeat(${sortedSprints.length}, 50px) auto`, gridTemplateRows: `auto auto repeat(${flattenedIssues.length}, 35px)` }}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}

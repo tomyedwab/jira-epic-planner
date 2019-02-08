@@ -3,6 +3,7 @@ import EpicIssues from './EpicIssues';
 
 const ISSUE_PRIORITIES = {
     "Done": 0,
+    "Awaiting Deploy": 4000000,
     "In Review": 3000000,
     "In Progress": 2000000,
     "Dev": 2000000,
@@ -20,7 +21,7 @@ export function useIssues(epic) {
 
         // Primary sort: "Done" at the top, then current sprint, then rest
         if (issue.fields.status.name === "Done") {
-            priority = 9000000;
+            priority = 10000000;
             sprints = issue.sprints;
         } else if (issue.sprints.indexOf(activeSprint) >= 0) {
             priority = 5000000;
@@ -100,11 +101,11 @@ export function useIssues(epic) {
                 }
             });
         });
+        issues.forEach(issue => issue.priority = calcIssuePriority(issue, activeSprint));
+
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
-            .sort((a, b) => {
-                return calcIssuePriority(b, activeSprint) - calcIssuePriority(a, activeSprint);
-            }));
+            .sort((a, b) => b.priority - a.priority));
         window.TOP_LEVEL_ISSUES = topLevelIssues;
         return {
             activeSprint: activeSprint,
