@@ -1,8 +1,6 @@
 import React, {useState} from 'react';
 import {useIssues} from './Api.js';
 
-// TODO: Styling for "in progress" issues
-
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
     "Design Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10322&avatarType=issuetype",
@@ -13,7 +11,48 @@ const ISSUE_ICONS = {
     "Sub-task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
 };
 
+// Column offset of the right edge of the static columns & first column of the sprint list
 const SEND = 5;
+
+const SPRINT_DATE_MAP = {
+    "2018-01": new Date("2018-02-05 12:00:00"),
+    "2018-02": new Date("2018-02-12 12:00:00"),
+    "2018-03": new Date("2018-03-05 12:00:00"),
+    "2019-00": new Date("2018-01-07 12:00:00"),
+};
+
+const getSprintDate = sprintId => {
+    const sprints = Object.keys(SPRINT_DATE_MAP).sort();
+    let latestSprint = null;
+    sprints.forEach(sprint => {
+        if (sprintId >= sprint) {
+            latestSprint = sprint;
+        }
+    });
+    if (!latestSprint) {
+        return null;
+    }
+    const sprintOffset = sprintId.split("-")[1] - latestSprint.split("-")[1];
+    const nextDate = new Date(SPRINT_DATE_MAP[latestSprint]);
+    nextDate.setDate(nextDate.getDate() + 14*sprintOffset);
+    return nextDate;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const getSprintDateStr = sprintId => {
+    const startDate = getSprintDate(sprintId);
+    if (!startDate) {
+        return null;
+    }
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 11);
+    return <span>
+        {MONTHS[startDate.getMonth()] + " " + startDate.getDate()}
+        <br/>
+        {MONTHS[endDate.getMonth()] + " " + endDate.getDate()}
+    </span>;
+}
 
 const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprintIdx) => {
     const style = {
@@ -139,13 +178,16 @@ export default function EpicIssues(props) {
     let highlightColumn2 = null;
     const activeSprintIdx = sortedSprints.indexOf(activeSprint);
     if (activeSprintIdx >= 0) {
-        highlightColumn1 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 3}} key={"highlight"} />;
+        highlightColumn1 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 4}} key={"highlight"} />;
         highlightColumn2 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 1+flattenedIssues.length}} key={"highlight"} />;
     }
     const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2}} key={"sprint-" + sprint}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint}>
+        {getSprintDateStr(sprint)}
+    </div>);
+    const header3 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 3}} key={"sprint-" + sprint}>
         {sprint.split("-")[1]}
     </div>);
 
@@ -162,12 +204,12 @@ export default function EpicIssues(props) {
             <a href="#" onClick={forceReload}>Reload</a>,
         ];
     }
-    const header3 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 1, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
+    const header4 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 1, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
         {headerContent}
     </div>;
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 37px"}}>
+        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
@@ -175,10 +217,11 @@ export default function EpicIssues(props) {
             {highlightColumn1}
             {header1}
             {header2}
+            {header3}
         </div>
         <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
             {highlightColumn2}
-            {header3}
+            {header4}
             {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
     </div>;
