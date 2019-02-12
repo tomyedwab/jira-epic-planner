@@ -11,8 +11,15 @@ const ISSUE_ICONS = {
     "Sub-task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
 };
 
+const SUBTEAM_STYLES = {
+    "Frontend": {backgroundColor: "rgb(250, 80, 174, 0.4)"},
+    "Backend": {backgroundColor: "rgb(55, 197, 253, 0.4)"},
+    "Front/Backend": {backgroundImage: "-webkit-linear-gradient(-30deg, rgb(250, 80, 174, 0.4) 50%, rgb(55, 197, 253, 0.4) 50%)"},
+    "Design": {backgroundColor: "rgb(20, 191, 150, 0.4)"},
+}
+
 // Column offset of the right edge of the static columns & first column of the sprint list
-const SEND = 5;
+const SEND = 6;
 
 const SPRINT_DATE_MAP = {
     "2018-01": new Date("2018-02-05 12:00:00"),
@@ -62,17 +69,21 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
         fontFamily: "'Lato', sans-serif",
         fontSize: "14px",
     };
+
     const ret = [
         <div style={{backgroundColor: !!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
         <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"}>
-            <img src={ISSUE_ICONS[issue.fields.issuetype.name]} style={{marginRight: 6, verticalAlign: "bottom"}} />
+            <img src={ISSUE_ICONS[issue.type]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
             {issue.fields.summary}
         </div>,
         <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.fields.summary}>
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={{verticalAlign: "top"}}>{issue.key}</a>
         </div>,
-        <div style={{...style, gridColumn: 4, gridColumnEnd: SEND, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::5"}>
+        <div style={{...style, ...SUBTEAM_STYLES[issue.subteam], gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"} title={issue.fields.summary}>
+            {issue.subteam}
+        </div>,
+        <div style={{...style, gridColumn: 5, gridColumnEnd: SEND, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
             {issue.status}
         </div>,
     ];
@@ -104,22 +115,38 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
         issueIcon = <svg viewBox="-6 -6 60 60" width={"24px"} height={"24px"} style={{verticalAlign: "top", float: "right", marginRight: 8}}>
             <polygon fill="#ffffff" points="40.6,12.1 17,35.7 7.4,26.1 4.6,31 17,43.3 43.4,16.9"/>
         </svg>;
-    } else if (issue.status === "In Progress" || issue.status === "Dev") {
-        issueColor = "#1865f2";
-    } else if (issue.status === "In Review" || issue.status === "Awaiting Deploy") {
-        issueColor = "#9059ff";
-    } else if (issue.blockedBy) {
-        issueColor = "#d92916";
-        issueIcon = <svg viewBox="0 0 512 512" width={"20px"} height={"20px"} style={{verticalAlign: "top", float: "right", marginRight: 8, marginTop: 3}}>
-            <path d="M501.35,369.069L320.565,66.266c-13.667-23.008-37.805-36.749-64.567-36.749c-26.762,0-50.9,13.741-64.567,36.749    L10.662,369.069c-13.96,23.492-14.224,51.706-0.719,75.462c13.536,23.771,37.922,37.951,65.27,37.951h361.57    c27.348,0,51.736-14.18,65.27-37.951C515.56,420.776,515.296,392.561,501.35,369.069z M255.999,122.094    c16.587,0,30.032,13.445,30.032,30.032v120.13c0,16.585-13.445,30.032-30.032,30.032c-16.587,0-30.032-13.448-30.032-30.032    v-120.13h0C225.966,135.539,239.412,122.094,255.999,122.094z M255.999,422.417c-24.841,0-45.049-20.208-45.049-45.049    c0-24.841,20.208-45.049,45.049-45.049c24.841,0,45.049,20.208,45.049,45.049C301.047,402.21,280.84,422.417,255.999,422.417z" fill="#ffffff" />
-        </svg>;
-    }
+    } else {
+        if (issue.status === "In Progress" || issue.status === "Dev") {
+            issueColor = "#1865f2";
+        } else if (issue.status === "In Review" || issue.status === "Awaiting Deploy") {
+            issueColor = "#9059ff";
+        } else if (issue.blockedBy) {
+            issueColor = "#d92916";
+            issueIcon = <svg viewBox="0 0 512 512" width={"20px"} height={"20px"} style={{verticalAlign: "top", float: "right", marginRight: 8, marginTop: 3}}>
+                <path d="M501.35,369.069L320.565,66.266c-13.667-23.008-37.805-36.749-64.567-36.749c-26.762,0-50.9,13.741-64.567,36.749    L10.662,369.069c-13.96,23.492-14.224,51.706-0.719,75.462c13.536,23.771,37.922,37.951,65.27,37.951h361.57    c27.348,0,51.736-14.18,65.27-37.951C515.56,420.776,515.296,392.561,501.35,369.069z M255.999,122.094    c16.587,0,30.032,13.445,30.032,30.032v120.13c0,16.585-13.445,30.032-30.032,30.032c-16.587,0-30.032-13.448-30.032-30.032    v-120.13h0C225.966,135.539,239.412,122.094,255.999,122.094z M255.999,422.417c-24.841,0-45.049-20.208-45.049-45.049    c0-24.841,20.208-45.049,45.049-45.049c24.841,0,45.049,20.208,45.049,45.049C301.047,402.21,280.84,422.417,255.999,422.417z" fill="#ffffff" />
+            </svg>;
+        }
 
-    if (issue.status !== "Done" && issue.assignee) {
-        const initials = issue.assignee.split(" ").map(x => x[0]).join("").toUpperCase();
-        issueIcon = <div style={{float: "right", backgroundColor: "#fff", borderRadius: 14, margin: 2, padding: 4, fontSize: "12px", fontWeight: "bold"}}>
-            {initials}
-        </div>;
+        if (issue.assignee) {
+            const assigneeStyle = {
+                backgroundColor: "#fff",
+                float: "right",
+                borderRadius: 14,
+                margin: 2,
+                padding: 4,
+                fontSize: "12px",
+                fontWeight: "bold",
+                minWidth: 18,
+                minHeight: 14,
+                textAlign: "center",
+            };
+
+            const initials = issue.assignee ? issue.assignee.split(" ").map(x => x[0]).join("").toUpperCase() : null;
+
+            issueIcon = <div style={assigneeStyle}>
+                {initials}
+            </div>;
+        }
     }
 
     spans.forEach((span, idx) => {
@@ -209,7 +236,7 @@ export default function EpicIssues(props) {
     </div>;
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
+        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 75px 90px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
@@ -219,7 +246,7 @@ export default function EpicIssues(props) {
             {header2}
             {header3}
         </div>
-        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 85px 120px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
+        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 120px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
             {highlightColumn2}
             {header4}
             {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints, sortedSprints.indexOf(activeSprint)))}

@@ -21,6 +21,7 @@ import org.slf4j.event.Level
 import java.io.File
 import java.util.logging.Level.ALL
 
+// TODO: Auto-clear cache after some timeout
 
 @Serializable
 data class Secrets(val JiraToken: String)

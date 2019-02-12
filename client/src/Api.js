@@ -71,9 +71,24 @@ export function useIssues(epic) {
         issues.forEach(issue => {
             topLevelIssuesMap[issue.key] = issue;
             issue.fields.subtasks.forEach(subtask => subtask.sprints = []);
+            issue.type = issue.fields.issuetype.name;
             issue.blockedBy = null;
             issue.assignee = (issue.fields.assignee || {}).displayName;
             issue.status = issue.fields.status.name;
+            issue.subteam = null;
+            if (issue.fields.labels && issue.fields.labels.indexOf("frontend") >= 0) {
+                issue.subteam = "Frontend";
+            }
+            if (issue.fields.labels && issue.fields.labels.indexOf("backend") >= 0) {
+                if (issue.subteam === "Frontend") {
+                    issue.subteam = "Front/Backend";
+                } else {
+                    issue.subteam = "Backend";
+                }
+            }
+            if (issue.type === "Design Task") {
+                issue.subteam = "Design";
+            }
         });
         issues.forEach(issue => {
             issue.fields.issuelinks.forEach(link => {
