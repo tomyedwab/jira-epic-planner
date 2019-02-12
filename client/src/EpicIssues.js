@@ -12,9 +12,9 @@ const ISSUE_ICONS = {
 };
 
 const SUBTEAM_STYLES = {
-    "Frontend": {backgroundColor: "rgb(250, 80, 174, 0.4)"},
+    "Frontend": {backgroundColor: "rgb(255, 177, 0, 0.4)"},
     "Backend": {backgroundColor: "rgb(55, 197, 253, 0.4)"},
-    "Front/Backend": {backgroundImage: "-webkit-linear-gradient(-30deg, rgb(250, 80, 174, 0.4) 50%, rgb(55, 197, 253, 0.4) 50%)"},
+    "Front/Backend": {backgroundImage: "-webkit-linear-gradient(-30deg, rgb(255, 177, 0, 0.4) 50%, rgb(55, 197, 253, 0.4) 50%)"},
     "Design": {backgroundColor: "rgb(20, 191, 150, 0.4)"},
 }
 
