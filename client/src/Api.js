@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import EpicIssues from './EpicIssues';
 
 const ISSUE_PRIORITIES = {
     "Done": 0,

@@ -164,7 +164,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
 };
 
 export default function EpicIssues(props) {
-    const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
+    const [_, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
     const [showDone, setShowDone] = useState(false);
     const [showFrontend, setShowFrontend] = useState(true);
     const [showBackend, setShowBackend] = useState(true);
@@ -283,10 +283,6 @@ export default function EpicIssues(props) {
     const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint}>
         {sprint.split("-")[1]}
     </div>);
-
-    const header4 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 1, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
-        {headerContent}
-    </div>;
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
         <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "visible", flex: "0 0 68px"}}>
