@@ -163,29 +163,29 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
     return ret;
 };
 
-const flattenIssues = (topLevelIssues, showDone) => {
-    const ret = [];
-    let countDone = 0;
-    topLevelIssues.forEach((issue, idx) => {
-        if (issue.status === "Done") {
-            countDone += 1;
-            if (!showDone) {
-                return;
-            }
-        }
-        ret.push([false, issue.fields.subtasks.length === 0, issue]);
-        issue.fields.subtasks.forEach((subissue, subidx) => {
-            ret.push([true, subidx === issue.fields.subtasks.length - 1, subissue]);
-        });
-    });
-    return [ret, countDone];
-};
-
 export default function EpicIssues(props) {
     const [issues, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
     const [showDone, setShowDone] = useState(false);
+    const [showFrontend, setShowFrontend] = useState(true);
+    const [showBackend, setShowBackend] = useState(true);
+    const [showDesign, setShowDesign] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
 
-    const [flattenedIssues, completedIssues] = flattenIssues(topLevelIssues, showDone);
+    const filteredIssues = topLevelIssues.filter(issue => (
+        (showDone || issue.status !== "Done") &&
+        (showDesign || issue.subteam !== "Design") &&
+        (showFrontend || (issue.subteam !== "Frontend" && issue.subteam !== "Front/Backend")) &&
+        (showBackend || (issue.subteam !== "Backend" && issue.subteam !== "Front/Backend"))
+    ));
+
+    const flattenedIssues = [];
+    filteredIssues.forEach((issue, idx) => {
+        flattenedIssues.push([false, issue.fields.subtasks.length === 0, issue]);
+        issue.fields.subtasks.forEach((subissue, subidx) => {
+            flattenedIssues.push([true, subidx === issue.fields.subtasks.length - 1, subissue]);
+        });
+    });
+
     let sprintsMap = {};
     flattenedIssues.forEach(([_, __, issue]) => {
         issue.sprints.forEach(sprint => {
@@ -204,6 +204,11 @@ export default function EpicIssues(props) {
             sortedYears[yearIdx][2]++;
         }
     });
+
+    const fontStyle = {
+        fontFamily: "'Lato', sans-serif",
+    };
+
     let highlightColumn1 = null;
     let highlightColumn2 = null;
     const activeSprintIdx = sortedSprints.indexOf(activeSprint);
@@ -211,48 +216,89 @@ export default function EpicIssues(props) {
         highlightColumn1 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 4}} key={"highlight"} />;
         highlightColumn2 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 1+flattenedIssues.length}} key={"highlight"} />;
     }
-    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
+
+    let headerContent = <span>"Loading issues..."</span>;
+    if (!loading) {
+        headerContent = [
+            <span>{`Showing ${filteredIssues.length} out of ${topLevelIssues.length} issues.`}</span>,
+            <button style={{margin: 4, background: "none", border: "none", color: "#1865f2"}} onClick={() => setShowFilters(!showFilters)} title="Filters">
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0.5 0H15.5C15.7761 0 16 0.223858 16 0.5V1.5C16 1.77614 15.7761 2 15.5 2H0.5C0.223858 2 0 1.77614 0 1.5V0.5C0 0.223858 0.223858 0 0.5 0ZM3.5 5H12.5C12.7761 5 13 5.22386 13 5.5V6.5C13 6.77614 12.7761 7 12.5 7H3.5C3.22386 7 3 6.77614 3 6.5V5.5C3 5.22386 3.22386 5 3.5 5ZM6.5 10H9.5C9.77614 10 10 10.2239 10 10.5V11.5C10 11.7761 9.77614 12 9.5 12H6.5C6.22386 12 6 11.7761 6 11.5V10.5C6 10.2239 6.22386 10 6.5 10Z" fill="#1865f2" />
+                </svg>
+            </button>,
+            <button style={{fontSize: "16px", fontWeight: "bold", margin: 4, marginRight: 12, marginLeft: 0, background: "none", border: "none", color: "#1865f2"}} onClick={forceReload} title="Reload">
+                ↺
+            </button>,
+            showFilters && <div style={{position: "absolute", right: 42, top: 30, padding: 16, backgroundColor: "#fff", border: "1px solid #000"}}>
+                <div>
+                    <input type="checkbox" checked={showDone} onClick={() => setShowDone(!showDone)} />
+                    <label>Show completed</label>
+                </div>
+                <div>
+                    <input type="checkbox" checked={showFrontend} onClick={() => setShowFrontend(!showFrontend)} />
+                    <label>Show Frontend</label>
+                </div>
+                <div>
+                    <input type="checkbox" checked={showBackend} onClick={() => setShowBackend(!showBackend)} />
+                    <label>Show Backend</label>
+                </div>
+                <div>
+                    <input type="checkbox" checked={showDesign}  onClick={() => setShowDesign(!showDesign)}/>
+                    <label>Show Design</label>
+                </div>
+            </div>,
+        ];
+    }
+
+    const header0 = [
+        <div style={{...fontStyle, gridColumnStart: 1, gridColumnEnd: SEND, gridRowStart: 1, gridRowEnd: 3, fontWeight: "bold"}}>
+            <button onClick={props.clearSelectedEpic} style={{fontSize: "22px", margin: 4, backgroundColor: "rgba(0, 0, 0, 5%)", borderRadius: 8}} title="Back to epics">
+                ⤺
+            </button>{" "}
+            {props.epic.key}: {props.epic.fields.customfield_10003}{" "}
+            <div style={{display: "inline-block", fontSize: "12px", float: "right", position: "relative"}}>
+                {headerContent}
+            </div>
+        </div>,
+        <div style={{...fontStyle, gridColumnStart: 1, gridColumnEnd: 3, gridRow: 3, paddingLeft: 30, fontWeight: "bold"}}>
+            Task
+        </div>,
+        <div style={{...fontStyle, gridColumn: 3, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+            Issue #
+        </div>,
+        <div style={{...fontStyle, gridColumn: 4, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+            Subteam
+        </div>,
+        <div style={{...fontStyle, gridColumnStart: 5, gridColumnEnd: 7, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+            Status
+            <span style={{fontSize: "10px"}}> (estim.)</span>
+        </div>,
+    ];
+    const header1 = sortedYears.map((yearInfo, idx) => <div style={{...fontStyle, gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint}>
         {getSprintDateStr(sprint)}
     </div>);
-    const header3 = sortedSprints.map((sprint, idx) => <div style={{gridColumn: SEND + idx, gridRow: 3}} key={"sprint-" + sprint}>
+    const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint}>
         {sprint.split("-")[1]}
     </div>);
 
-    let headerContent = "Loading issues...";
-    if (!loading) {
-        const totalIssues = issues.length;
-        const visibleIssues = showDone ? totalIssues : totalIssues - completedIssues;
-        headerContent = [
-            <span>{`Showing ${visibleIssues} out of ${totalIssues} issues.`}</span>,
-            " ",
-            showDone && <a href="#" onClick={() => setShowDone(false)}>Hide completed</a>,
-            !showDone && (completedIssues > 0) && <a href="#" onClick={() => setShowDone(true)}>Show completed</a>,
-            " ",
-            <a href="#" onClick={forceReload}>Reload</a>,
-        ];
-    }
     const header4 = <div style={{gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: 1, backgroundColor: "rgba(0, 0, 0, 5%)", paddingLeft: 30, paddingTop: 8}}>
         {headerContent}
     </div>;
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
-            <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
-                <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
-                {props.epic.key}: {props.epic.fields.customfield_10003}
-            </div>
+        <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "visible", flex: "0 0 68px"}}>
             {highlightColumn1}
+            {header0}
             {header1}
             {header2}
             {header3}
         </div>
         <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
             {highlightColumn2}
-            {header4}
-            {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints, sortedSprints.indexOf(activeSprint)))}
+            {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
     </div>;
 }
