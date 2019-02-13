@@ -220,7 +220,7 @@ export default function EpicIssues(props) {
     let headerContent = <span>"Loading issues..."</span>;
     if (!loading) {
         headerContent = [
-            <span>{`Showing ${filteredIssues.length} out of ${topLevelIssues.length} issues.`}</span>,
+            <span>{`Showing ${filteredIssues.length} of ${topLevelIssues.length} issues.`}</span>,
             <button style={{margin: 4, background: "none", border: "none", color: "#1865f2"}} onClick={() => setShowFilters(!showFilters)} title="Filters">
                 <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M0.5 0H15.5C15.7761 0 16 0.223858 16 0.5V1.5C16 1.77614 15.7761 2 15.5 2H0.5C0.223858 2 0 1.77614 0 1.5V0.5C0 0.223858 0.223858 0 0.5 0ZM3.5 5H12.5C12.7761 5 13 5.22386 13 5.5V6.5C13 6.77614 12.7761 7 12.5 7H3.5C3.22386 7 3 6.77614 3 6.5V5.5C3 5.22386 3.22386 5 3.5 5ZM6.5 10H9.5C9.77614 10 10 10.2239 10 10.5V11.5C10 11.7761 9.77614 12 9.5 12H6.5C6.22386 12 6 11.7761 6 11.5V10.5C6 10.2239 6.22386 10 6.5 10Z" fill="#1865f2" />
@@ -296,7 +296,7 @@ export default function EpicIssues(props) {
             {header2}
             {header3}
         </div>
-        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
+        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length}, 35px)` }}>
             {highlightColumn2}
             {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, sortedSprints.indexOf(activeSprint)))}
         </div>
