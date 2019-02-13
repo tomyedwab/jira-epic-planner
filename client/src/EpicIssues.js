@@ -19,7 +19,7 @@ const SUBTEAM_STYLES = {
 }
 
 // Column offset of the right edge of the static columns & first column of the sprint list
-const SEND = 6;
+const SEND = 7;
 
 const SPRINT_DATE_MAP = {
     "2018-01": new Date("2018-02-05 12:00:00"),
@@ -83,8 +83,11 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
         <div style={{...style, ...SUBTEAM_STYLES[issue.subteam], gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"} title={issue.fields.summary}>
             {issue.subteam}
         </div>,
-        <div style={{...style, gridColumn: 5, gridColumnEnd: SEND, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
+        <div style={{...style, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
             {issue.status}
+        </div>,
+        issue.status === "To Do" && <div style={{...style, gridColumn: 6, gridRow: row + 1, fontSize: "12px", fontWeight: "900", textAlign: "center"}} key={issue.key + "::6"}>
+            {`${issue.estimate || "-"}`}
         </div>,
     ];
 
@@ -236,7 +239,7 @@ export default function EpicIssues(props) {
     </div>;
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 75px 90px 120px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
+        <div style={{ display: "grid", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "scroll", flex: "0 0 62px"}}>
             <div style={{gridColumnStart: 1, gridColumnEnd: 5, gridRow: 1}} key="epicName">
                 <button onClick={props.clearSelectedEpic}>&lt; Back</button>{" "}
                 {props.epic.key}: {props.epic.fields.customfield_10003}
@@ -246,7 +249,7 @@ export default function EpicIssues(props) {
             {header2}
             {header3}
         </div>
-        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 120px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
+        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length+1}, 35px)` }}>
             {highlightColumn2}
             {header4}
             {flattenedIssues.map((info, row) => renderIssue(info, row+1, sortedSprints, sortedSprints.indexOf(activeSprint)))}

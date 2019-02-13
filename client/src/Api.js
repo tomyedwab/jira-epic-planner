@@ -75,6 +75,7 @@ export function useIssues(epic) {
             issue.blockedBy = null;
             issue.assignee = (issue.fields.assignee || {}).displayName;
             issue.status = issue.fields.status.name;
+            issue.estimate = issue.fields.customfield_10105;
             issue.subteam = null;
             if (issue.fields.labels && issue.fields.labels.indexOf("frontend") >= 0) {
                 issue.subteam = "Frontend";
