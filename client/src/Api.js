@@ -63,44 +63,55 @@ export function useIssues(epic) {
             });
     }
 
+    function processIssue(issue) {
+        issue.type = issue.fields.issuetype.name;
+        issue.sprints = [];
+        issue.blockedBy = null;
+        issue.assignee = (issue.fields.assignee || {}).displayName;
+        issue.status = issue.fields.status.name;
+        issue.estimate = issue.fields.customfield_10105;
+        issue.subteam = null;
+        if (issue.fields.labels && issue.fields.labels.indexOf("frontend") >= 0) {
+            issue.subteam = "Frontend";
+        }
+        if (issue.fields.labels && issue.fields.labels.indexOf("backend") >= 0) {
+            if (issue.subteam === "Frontend") {
+                issue.subteam = "Front/Backend";
+            } else {
+                issue.subteam = "Backend";
+            }
+        }
+        if (issue.type === "Design Task") {
+            issue.subteam = "Design";
+        }
+
+        issue.subtasks = issue.fields.subtasks || [];
+        issue.subtasks.forEach(processIssue);
+    }
+
     function processIssues(issues) {
         const topLevelIssuesMap = {};
         let activeSprint = null;
         // All stories are top level issues, put them in first
         issues.forEach(issue => {
             topLevelIssuesMap[issue.key] = issue;
-            issue.fields.subtasks.forEach(subtask => subtask.sprints = []);
-            issue.type = issue.fields.issuetype.name;
-            issue.blockedBy = null;
-            issue.assignee = (issue.fields.assignee || {}).displayName;
-            issue.status = issue.fields.status.name;
-            issue.estimate = issue.fields.customfield_10105;
-            issue.subteam = null;
-            if (issue.fields.labels && issue.fields.labels.indexOf("frontend") >= 0) {
-                issue.subteam = "Frontend";
-            }
-            if (issue.fields.labels && issue.fields.labels.indexOf("backend") >= 0) {
-                if (issue.subteam === "Frontend") {
-                    issue.subteam = "Front/Backend";
-                } else {
-                    issue.subteam = "Backend";
-                }
-            }
-            if (issue.type === "Design Task") {
-                issue.subteam = "Design";
-            }
+            processIssue(issue);
         });
         issues.forEach(issue => {
             issue.fields.issuelinks.forEach(link => {
                 if (link.type.name === "Blocks" && link.outwardIssue &&
                     topLevelIssuesMap[link.outwardIssue.key]) {
                     topLevelIssuesMap[link.outwardIssue.key].blockedBy = issue;
+
+                    if (issue.type === "Design Task" && topLevelIssuesMap[link.outwardIssue.key].type === "Story") {
+                        delete topLevelIssuesMap[issue.key];
+                        topLevelIssuesMap[link.outwardIssue.key].subtasks.push(issue);
+                    }
                 }
             });
         });
         issues.forEach(issue => {
             // Look for a custom field that contains sprints
-            issue.sprints = [];
             Object.keys(issue.fields).forEach(field => {
                 if (issue.fields[field] instanceof Array) {
                     issue.fields[field].forEach(value => {
