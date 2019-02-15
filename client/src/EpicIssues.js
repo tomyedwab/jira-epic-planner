@@ -61,7 +61,7 @@ const getSprintDateStr = sprintId => {
     </span>;
 }
 
-const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprintIdx) => {
+const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, setHover) => {
     const style = {
         paddingTop: isNested ? 4 : 8,
         paddingBottom: isLast ? 8 : 4,
@@ -70,9 +70,12 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, activeSprint
         fontSize: "14px",
     };
 
+    const hovering = hoverItem === issue.key;
+    const backgroundColor = hovering ? "rgba(0, 0, 0, 15%)" : (!!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)"); 
+
     const ret = [
-        <div style={{backgroundColor: !!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)", gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
-        <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"}>
+        <div style={{backgroundColor: backgroundColor, gridColumnStart: 1, gridColumnEnd: SEND+sortedSprints.length, gridRow: row + 1}} key={issue.key + "::bg"} />,
+        <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"} onMouseOver={() => setHover(issue.key, true)} onMouseOut={() => setHover(issue.key, false)}>
             <img src={ISSUE_ICONS[issue.type]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
             {issue.fields.summary}
@@ -170,6 +173,7 @@ export default function EpicIssues(props) {
     const [showBackend, setShowBackend] = useState(true);
     const [showDesign, setShowDesign] = useState(true);
     const [showFilters, setShowFilters] = useState(false);
+    const [hoverItem, setHoverItem] = useState(null);
 
     const filteredIssues = topLevelIssues.filter(issue => (
         (showDone || issue.status !== "Done") &&
@@ -180,9 +184,9 @@ export default function EpicIssues(props) {
 
     const flattenedIssues = [];
     filteredIssues.forEach((issue, idx) => {
-        flattenedIssues.push([false, issue.fields.subtasks.length === 0, issue]);
-        issue.fields.subtasks.forEach((subissue, subidx) => {
-            flattenedIssues.push([true, subidx === issue.fields.subtasks.length - 1, subissue]);
+        flattenedIssues.push([false, issue.subtasks.length === 0, issue]);
+        issue.subtasks.forEach((subissue, subidx) => {
+            flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
         });
     });
 
@@ -294,7 +298,13 @@ export default function EpicIssues(props) {
         </div>
         <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length}, 35px)` }}>
             {highlightColumn2}
-            {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, sortedSprints.indexOf(activeSprint)))}
+            {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, hoverItem, (key, over) => {
+                if (over) {
+                    setHoverItem(key);
+                } else if (hoverItem === key) {
+                    setHoverItem(null);
+                }
+            }))}
         </div>
     </div>;
 }
