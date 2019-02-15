@@ -136,8 +136,21 @@ export function useIssues(epic) {
                     });
                 }
             });
+            issue.sprints.sort();
+            if (issue.sprints.length > 0) {
+                // For now just assign the latest sprint to all the subtasks
+                issue.subtasks.forEach(subtask => {
+                    subtask.sprints = [issue.sprints[issue.sprints.length - 1]];
+                });
+            }
         });
-        issues.forEach(issue => issue.priority = calcIssuePriority(issue, activeSprint));
+        issues.forEach(issue => {
+            issue.priority = calcIssuePriority(issue, activeSprint);
+            issue.subtasks.forEach(subtask => {
+                subtask.priority = calcIssuePriority(subtask, activeSprint);
+            });
+            issue.subtasks.sort((a, b) => b.priority - a.priority);
+        });
 
         const topLevelIssues = (
             Object.values(topLevelIssuesMap)
