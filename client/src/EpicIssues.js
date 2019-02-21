@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import {useIssues} from './Api.js';
 
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
@@ -47,8 +46,8 @@ const getSprintDate = sprintId => {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const getSprintDateStr = sprintId => {
-    const startDate = getSprintDate(sprintId);
+const getSprintDateStr = sprint => {
+    const startDate = getSprintDate(sprint.name);
     if (!startDate) {
         return null;
     }
@@ -59,6 +58,54 @@ const getSprintDateStr = sprintId => {
         <br/>
         {MONTHS[endDate.getMonth()] + " " + endDate.getDate()}
     </span>;
+}
+
+const ISSUE_PRIORITIES = {
+    "Done": 0,
+    "Awaiting Deploy": 4000000,
+    "In Review": 3000000,
+    "In Progress": 2000000,
+    "Dev": 2000000,
+    "To Do": 1000000,
+};
+
+const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
+    // TODO: Include dependencies in sort
+    let priority = 0;
+    let sprints = [];
+
+    // Primary sort: "Done" at the top, then current sprint, then rest
+    if (issue.status === "Done") {
+        priority = 10000000;
+        sprints = sprintNames;
+    } else if (sprintNames.indexOf(activeSprintName) >= 0) {
+        priority = 5000000;
+        // sprints not relevant
+    } else {
+        // Sort based on first upcoming sprint, unless there are none
+        sprints = sprintNames.filter(s => s > activeSprintName);
+        if (sprints.length === 0) {
+            sprints = sprintNames;
+        }
+    }
+
+    // Secondary sort: statuses in logical order
+    priority += ISSUE_PRIORITIES[issue.status];
+
+    // Tertiary sort: chronological by sprint
+    if (sprints.length > 0) {
+        priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
+    } else if (issue.status === "Done") {
+        // Assume this was done infinitely far in the past
+        priority += 999999;
+    }
+
+    // Quaternary (?) sort: Whether the issue has been assigned
+    if (issue.assignee) {
+        priority += 0.5;
+    }
+
+    return priority;
 }
 
 const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, setHover) => {
@@ -78,12 +125,12 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
         <div style={{...style, paddingLeft: 4, gridColumnStart: isNested ? 2 : 1, gridColumnEnd: 3, gridRow: row + 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}} key={issue.key + "::1"} onMouseOver={() => setHover(issue.key, true)} onMouseOut={() => setHover(issue.key, false)}>
             <img src={ISSUE_ICONS[issue.type]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
-            {issue.fields.summary}
+            {issue.summary}
         </div>,
-        <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.fields.summary}>
+        <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.summary}>
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={{verticalAlign: "top"}}>{issue.key}</a>
         </div>,
-        <div style={{...style, ...SUBTEAM_STYLES[issue.subteam], gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"} title={issue.fields.summary}>
+        <div style={{...style, ...SUBTEAM_STYLES[issue.subteam], gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"}>
             {issue.subteam}
         </div>,
         <div style={{...style, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
@@ -97,7 +144,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
     const spans = [];
     let activeSpan = null;
     sortedSprints.forEach((sprint, idx) => {
-        const found = issue.sprints.indexOf(sprint) >= 0;
+        const found = issue.sprints.indexOf(sprint.id) >= 0;
         if (found) {
             if (activeSpan === null) {
                 activeSpan = spans.length;
@@ -167,7 +214,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
 };
 
 export default function EpicIssues(props) {
-    const [_, topLevelIssues, activeSprint, loading, forceReload] = useIssues(props.epic.key);
+    const {issues, sprints, loading, forceReload} = props;
     const [showDone, setShowDone] = useState(false);
     const [showFrontend, setShowFrontend] = useState(true);
     const [showBackend, setShowBackend] = useState(true);
@@ -175,38 +222,79 @@ export default function EpicIssues(props) {
     const [showFilters, setShowFilters] = useState(false);
     const [hoverItem, setHoverItem] = useState(null);
 
-    const filteredIssues = topLevelIssues.filter(issue => (
+    // Apply issue filters
+    const filteredIssues = issues.filter(issue => (
         (showDone || issue.status !== "Done") &&
         (showDesign || issue.subteam !== "Design") &&
         (showFrontend || (issue.subteam !== "Frontend" && issue.subteam !== "Front/Backend")) &&
         (showBackend || (issue.subteam !== "Backend" && issue.subteam !== "Front/Backend"))
     ));
 
-    const flattenedIssues = [];
-    filteredIssues.forEach((issue, idx) => {
-        flattenedIssues.push([false, issue.subtasks.length === 0, issue]);
-        issue.subtasks.forEach((subissue, subidx) => {
-            flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
-        });
-    });
-
+    // Get a sorted list of relevant sprints, and identify the active one
     let sprintsMap = {};
-    flattenedIssues.forEach(([_, __, issue]) => {
-        issue.sprints.forEach(sprint => {
-            sprintsMap[sprint] = 1;
+    let activeSprintName = null;
+    let activeSprintIdx = null;
+    filteredIssues.forEach(issue => {
+        issue.sprints.forEach(sprintId => {
+            sprintsMap[sprintId] = 1;
         });
     });
-    const sortedSprints = Object.keys(sprintsMap).sort();
+    let sortedSprints = (
+        Object.keys(sprintsMap)
+        .map(id => sprints[id])
+        .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
+    );
+    if (sortedSprints.length === 0) {
+        // Special-case: If there are no sprints then at least show the active
+        // sprint
+        sortedSprints = Object.values(sprints).filter(sprint => sprint.state === "ACTIVE");
+    }
+    if(sortedSprints.length < 4) {
+        // Special-case: If there are not many sprints than add a few at the
+        // end
+        const orderedSprints = (
+            Object.values(sprints)
+            .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
+        );
+        const startIdx = orderedSprints.map(sprint => sprint.name).indexOf(sortedSprints[sortedSprints.length - 1].name);
+        sortedSprints = sortedSprints.concat(orderedSprints.slice(startIdx+1, startIdx+5));
+    }
     let yearIdx = -1;
     const sortedYears = [];
     sortedSprints.forEach((sprint, idx) => {
-        const year = sprint.split("-")[0];
+        const year = sprint.name.split("-")[0];
         if (yearIdx < 0 || sortedYears[yearIdx][0] !== year) {
             yearIdx++;
             sortedYears[yearIdx] = [year, idx, 1];
         } else {
             sortedYears[yearIdx][2]++;
         }
+        if (sprint.state === "ACTIVE") {
+            activeSprintIdx = idx;
+            activeSprintName = sprint.name;
+        }
+    });
+
+    const issuePriorities = {};
+    filteredIssues.forEach(issue => {
+        const issueSprints = issue.sprints.map(sprintId => sprints[sprintId].name);
+
+        issuePriorities[issue.key] = calcIssuePriority(issue, issueSprints, activeSprintName);
+        issue.subtasks.forEach(subtask => {
+            issuePriorities[subtask.key] = calcIssuePriority(subtask, issueSprints, activeSprintName);
+        });
+    });
+    filteredIssues.sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
+
+    const flattenedIssues = [];
+    filteredIssues.forEach((issue, idx) => {
+        flattenedIssues.push([false, issue.subtasks.length === 0, issue]);
+
+        // Sort the subtasks as well
+        const subtasks = issue.subtasks.slice().sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
+        subtasks.forEach((subissue, subidx) => {
+            flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
+        });
     });
 
     const fontStyle = {
@@ -215,16 +303,15 @@ export default function EpicIssues(props) {
 
     let highlightColumn1 = null;
     let highlightColumn2 = null;
-    const activeSprintIdx = sortedSprints.indexOf(activeSprint);
-    if (activeSprintIdx >= 0) {
+    if (activeSprintIdx !== null) {
         highlightColumn1 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 4}} key={"highlight"} />;
         highlightColumn2 = <div style={{backgroundColor: "#dfd", gridColumn: SEND+activeSprintIdx, gridRowStart: 1, gridRowEnd: 1+flattenedIssues.length}} key={"highlight"} />;
     }
 
-    let headerContent = <span>"Loading issues..."</span>;
+    let headerContent = <span>Loading issues...</span>;
     if (!loading) {
         headerContent = [
-            <span>{`Showing ${filteredIssues.length} of ${topLevelIssues.length} issues.`}</span>,
+            <span>{`Showing ${filteredIssues.length} of ${issues.length} issues.`}</span>,
             <button style={{margin: 4, background: "none", border: "none", color: "#1865f2"}} onClick={() => setShowFilters(!showFilters)} title="Filters">
                 <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M0.5 0H15.5C15.7761 0 16 0.223858 16 0.5V1.5C16 1.77614 15.7761 2 15.5 2H0.5C0.223858 2 0 1.77614 0 1.5V0.5C0 0.223858 0.223858 0 0.5 0ZM3.5 5H12.5C12.7761 5 13 5.22386 13 5.5V6.5C13 6.77614 12.7761 7 12.5 7H3.5C3.22386 7 3 6.77614 3 6.5V5.5C3 5.22386 3.22386 5 3.5 5ZM6.5 10H9.5C9.77614 10 10 10.2239 10 10.5V11.5C10 11.7761 9.77614 12 9.5 12H6.5C6.22386 12 6 11.7761 6 11.5V10.5C6 10.2239 6.22386 10 6.5 10Z" fill="#1865f2" />
@@ -259,7 +346,7 @@ export default function EpicIssues(props) {
             <button onClick={props.clearSelectedEpic} style={{fontSize: "22px", margin: 4, backgroundColor: "rgba(0, 0, 0, 5%)", borderRadius: 8}} title="Back to epics">
                 ⤺
             </button>{" "}
-            {props.epic.key}: {props.epic.fields.customfield_10003}{" "}
+            {props.epic.key}: {props.epic.shortName}{" "}
             <div style={{display: "inline-block", fontSize: "12px", float: "right", position: "relative"}}>
                 {headerContent}
             </div>
@@ -281,11 +368,11 @@ export default function EpicIssues(props) {
     const header1 = sortedYears.map((yearInfo, idx) => <div style={{...fontStyle, gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint.id}>
         {getSprintDateStr(sprint)}
     </div>);
-    const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint}>
-        {sprint.split("-")[1]}
+    const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint.id}>
+        {sprint.name.split("-")[1]}
     </div>);
 
     return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>

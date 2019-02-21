@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 
-import {useEpics} from './Api.js';
+import {useData} from './Api.js';
 import Epics from './Epics.js';
 import EpicIssues from './EpicIssues.js';
 
@@ -22,7 +22,7 @@ function useLocation(cb, ready) {
 }
 
 const App = () => {
-    const [epics, loading, forceReload] = useEpics();
+    const [epics, issues, sprints, loading, forceReload] = useData();
     const [selectedEpic, selectEpic] = useState(null);
 
     const setLocation = useLocation(path => {
@@ -44,7 +44,8 @@ const App = () => {
     };
     
     if (selectedEpic) {
-        return <EpicIssues epic={selectedEpic} clearSelectedEpic={() => setSelectedEpic(null)} />
+        const filteredIssues = issues.filter(issue => issue.epic === selectedEpic.key);
+        return <EpicIssues epic={selectedEpic} loading={loading} issues={filteredIssues} sprints={sprints} forceReload={forceReload} clearSelectedEpic={() => setSelectedEpic(null)} />
     }
     return <Epics epics={epics} loading={loading} forceReload={forceReload} selectEpic={setSelectedEpic} />;
 };

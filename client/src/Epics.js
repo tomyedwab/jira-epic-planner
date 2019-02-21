@@ -14,10 +14,10 @@ const renderEpic = (epic, row, selectEpic) => {
             </a>
         </div>,
         <div style={{...style, gridColumn: 2, gridRow: row + 1}} key={epic.key + "::2"}>
-            {epic.fields.customfield_10003}
+            {epic.shortName}
         </div>,
         <div style={{...style, gridColumn: 3, gridRow: row + 1}} key={epic.key + "::3"}>
-            {epic.fields.summary}
+            {epic.summary}
         </div>,
     ];
 }
