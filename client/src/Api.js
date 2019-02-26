@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 
+import {PINGBOARD_DATA} from './static.js';
+
 window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
 
-export function useData() {
+export function useJiraData() {
     const [reloadNum, setReloadNum] = useState(0);
     const [epics, setEpics] = useState([]);
     const [issues, setIssues] = useState([]);
@@ -50,4 +52,21 @@ export function useData() {
     }, [reloadNum]);
 
     return [epics, issues, sprints, loading, () => setReloadNum(reloadNum + 1)];
+}
+
+export function usePingboardData() {
+    const [team, setTeam] = useState({});
+    const [OOOs, setOOO] = useState({});
+    const [supportRotation, setSupportRotation] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Just hard-code this for now
+        setTeam(PINGBOARD_DATA.TEAM_MEMBERS);
+        setOOO(PINGBOARD_DATA.OOO);
+        setSupportRotation(PINGBOARD_DATA.SUPPORT);
+        setLoading(false);
+    });
+
+    return [team, OOOs, supportRotation, loading];
 }

@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {getSprintDateStr} from './util';
 
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
@@ -19,46 +20,6 @@ const SUBTEAM_STYLES = {
 
 // Column offset of the right edge of the static columns & first column of the sprint list
 const SEND = 7;
-
-const SPRINT_DATE_MAP = {
-    "2018-01": new Date("2018-02-05 12:00:00"),
-    "2018-02": new Date("2018-02-12 12:00:00"),
-    "2018-03": new Date("2018-03-05 12:00:00"),
-    "2019-00": new Date("2018-01-07 12:00:00"),
-};
-
-const getSprintDate = sprintId => {
-    const sprints = Object.keys(SPRINT_DATE_MAP).sort();
-    let latestSprint = null;
-    sprints.forEach(sprint => {
-        if (sprintId >= sprint) {
-            latestSprint = sprint;
-        }
-    });
-    if (!latestSprint) {
-        return null;
-    }
-    const sprintOffset = sprintId.split("-")[1] - latestSprint.split("-")[1];
-    const nextDate = new Date(SPRINT_DATE_MAP[latestSprint]);
-    nextDate.setDate(nextDate.getDate() + 14*sprintOffset);
-    return nextDate;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const getSprintDateStr = sprint => {
-    const startDate = getSprintDate(sprint.name);
-    if (!startDate) {
-        return null;
-    }
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 11);
-    return <span>
-        {MONTHS[startDate.getMonth()] + " " + startDate.getDate()}
-        <br/>
-        {MONTHS[endDate.getMonth()] + " " + endDate.getDate()}
-    </span>;
-}
 
 const ISSUE_PRIORITIES = {
     "Done": 0,
@@ -369,7 +330,7 @@ export default function EpicIssues(props) {
         {yearInfo[0]}
     </div>);
     const header2 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint.id}>
-        {getSprintDateStr(sprint)}
+        {getSprintDateStr(sprint, true)}
     </div>);
     const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint.id}>
         {sprint.name.split("-")[1]}
