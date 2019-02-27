@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {getSprintDateStr} from './util';
+import globalStyles from "./styles.js";
 
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
@@ -10,13 +11,6 @@ const ISSUE_ICONS = {
     "Support": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10308&avatarType=issuetype",
     "Sub-task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
 };
-
-const SUBTEAM_STYLES = {
-    "Frontend": {backgroundColor: "rgb(255, 177, 0, 0.4)"},
-    "Backend": {backgroundColor: "rgb(55, 197, 253, 0.4)"},
-    "Front/Backend": {backgroundImage: "-webkit-linear-gradient(-30deg, rgb(255, 177, 0, 0.4) 50%, rgb(55, 197, 253, 0.4) 50%)"},
-    "Design": {backgroundColor: "rgb(20, 191, 150, 0.4)"},
-}
 
 // Column offset of the right edge of the static columns & first column of the sprint list
 const SEND = 7;
@@ -74,7 +68,6 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
         paddingTop: isNested ? 4 : 8,
         paddingBottom: isLast ? 8 : 4,
         color: (issue.status === "Done") ? "#aaa": "#000",
-        fontFamily: "'Lato', sans-serif",
         fontSize: "14px",
     };
 
@@ -89,9 +82,9 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
             {issue.summary}
         </div>,
         <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.summary}>
-            <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={{verticalAlign: "top"}}>{issue.key}</a>
+            <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={globalStyles.jiraLink}>{issue.key}</a>
         </div>,
-        <div style={{...style, ...SUBTEAM_STYLES[issue.subteam], gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"}>
+        <div style={{...style, ...globalStyles.team(issue.subteam), gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"}>
             {issue.subteam}
         </div>,
         <div style={{...style, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
@@ -258,10 +251,6 @@ export default function EpicIssues(props) {
         });
     });
 
-    const fontStyle = {
-        fontFamily: "'Lato', sans-serif",
-    };
-
     let highlightColumn1 = null;
     let highlightColumn2 = null;
     if (activeSprintIdx !== null) {
@@ -303,40 +292,41 @@ export default function EpicIssues(props) {
     }
 
     const header0 = [
-        <div style={{...fontStyle, gridColumnStart: 1, gridColumnEnd: SEND, gridRowStart: 1, gridRowEnd: 3, fontWeight: "bold"}}>
+        <div style={{gridColumnStart: 1, gridColumnEnd: SEND, gridRowStart: 1, gridRowEnd: 3}}>
             <button onClick={props.clearSelectedEpic} style={{fontSize: "22px", margin: 4, backgroundColor: "rgba(0, 0, 0, 5%)", borderRadius: 8}} title="Back to epics">
                 ⤺
             </button>{" "}
-            {props.epic.key}: {props.epic.shortName}{" "}
-            <div style={{display: "inline-block", fontSize: "12px", float: "right", position: "relative"}}>
+            <span style={globalStyles.pageTitle}>{props.epic.key}: {props.epic.shortName}</span>
+            {" "}
+            <div style={{...globalStyles.issueCount, display: "inline-block", float: "right", position: "relative"}}>
                 {headerContent}
             </div>
         </div>,
-        <div style={{...fontStyle, gridColumnStart: 1, gridColumnEnd: 3, gridRow: 3, paddingLeft: 30, fontWeight: "bold"}}>
+        <div style={{...globalStyles.heading, gridColumnStart: 1, gridColumnEnd: 3, gridRow: 3, paddingLeft: 30}}>
             Task
         </div>,
-        <div style={{...fontStyle, gridColumn: 3, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.heading, gridColumn: 3, gridRow: 3, textAlign: "center"}}>
             Issue #
         </div>,
-        <div style={{...fontStyle, gridColumn: 4, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.heading, gridColumn: 4, gridRow: 3, textAlign: "center"}}>
             Subteam
         </div>,
-        <div style={{...fontStyle, gridColumnStart: 5, gridColumnEnd: 7, gridRow: 3, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.heading, gridColumnStart: 5, gridColumnEnd: 7, gridRow: 3, textAlign: "center"}}>
             Status
             <span style={{fontSize: "10px"}}> (estim.)</span>
         </div>,
     ];
-    const header1 = sortedYears.map((yearInfo, idx) => <div style={{...fontStyle, gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
+    const header1 = sortedYears.map((yearInfo, idx) => <div style={{gridColumnStart: SEND + yearInfo[1], gridColumnEnd: SEND + yearInfo[1] + yearInfo[2], gridRow: 1}} key={"year-" + yearInfo[0]}>
         {yearInfo[0]}
     </div>);
-    const header2 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 2, fontSize: "8pt"}} key={"sprintdate-" + sprint.id}>
+    const header2 = sortedSprints.map((sprint, idx) => <div style={{...globalStyles.sprintDate, gridColumn: SEND + idx, gridRow: 2}} key={"sprintdate-" + sprint.id}>
         {getSprintDateStr(sprint, true)}
     </div>);
-    const header3 = sortedSprints.map((sprint, idx) => <div style={{...fontStyle, gridColumn: SEND + idx, gridRow: 3, fontWeight: "bold"}} key={"sprint-" + sprint.id}>
+    const header3 = sortedSprints.map((sprint, idx) => <div style={{...globalStyles.heading, gridColumn: SEND + idx, gridRow: 3}} key={"sprint-" + sprint.id}>
         {sprint.name.split("-")[1]}
     </div>);
 
-    return <div style={{display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
+    return <div style={{...globalStyles.fontStyle, ...globalStyles.table, display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
         <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "visible", flex: "0 0 68px"}}>
             {highlightColumn1}
             {header0}
