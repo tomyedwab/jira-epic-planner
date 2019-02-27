@@ -328,15 +328,17 @@ export default function EpicIssues(props) {
         {sprint.name.split("-")[1]}
     </div>);
 
+    const columnTemplate = `20px auto 75px 90px 140px 30px repeat(${sortedSprints.length}, 50px)`;
+
     return <div style={{...globalStyles.fontStyle, ...globalStyles.table, display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, overflowY: "visible", flex: "0 0 68px"}}>
+        <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: columnTemplate, overflowY: "visible", flex: "0 0 68px"}}>
             {highlightColumn1}
             {header0}
             {header1}
             {header2}
             {header3}
         </div>
-        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: `20px auto 75px 90px 90px 30px repeat(${sortedSprints.length}, 50px)`, gridTemplateRows: `repeat(${flattenedIssues.length}, 35px)` }}>
+        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: columnTemplate, gridTemplateRows: `repeat(${flattenedIssues.length}, 35px)` }}>
             {highlightColumn2}
             {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, hoverItem, (key, over) => {
                 if (over) {

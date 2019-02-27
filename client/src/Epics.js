@@ -53,9 +53,18 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
 
     const epicStats = {};
     const epicTotals = {
-        designPoints: 0,
-        fullstackPoints: 0,
-        backendPoints: 0,
+        Design: {
+            points: 0,
+        },
+        Frontend: {
+            points: 0,
+        },
+        Backend: {
+            points: 0,
+        },
+        Unknown: {
+            points: 0,
+        },
         totalPoints: 0,
     };
 
@@ -63,14 +72,26 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
         const epic = issue.epic || "";
         epicStats[epic] = epicStats[epic] || {
             count: 0,
-            designUnknown: 0,
-            designPoints: 0,
-            fullstackUnknown: 0,
-            fullstackPoints: 0,
-            backendUnknown: 0,
-            backendPoints: 0,
-            unknownPoints: 0,
-            unknownUnknown: 0,
+            Design: {
+                unknown: 0,
+                points: 0,
+                jiras: [],
+            },
+            Frontend: {
+                unknown: 0,
+                points: 0,
+                jiras: [],
+            },
+            Backend: {
+                unknown: 0,
+                points: 0,
+                jiras: [],
+            },
+            Unknown: {
+                unknown: 0,
+                points: 0,
+                jiras: [],
+            },
             totalPoints: 0,
         };
         epicStats[epic].count += 1;
@@ -79,6 +100,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
         let unestimated = 0;
         if (estimate === null) {
             estimate = 0;
+            
             if (issue.subtasks.length > 0) {
                 issue.subtasks.forEach(subtask => {
                     if (subtask.estimate !== null) {
@@ -92,23 +114,21 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
             }
         }
 
+        let team = "Unknown";
         if (issue.subteam === "Backend") {
-            epicStats[epic].backendPoints += estimate;
-            epicStats[epic].backendUnknown += unestimated;
-            epicTotals.backendPoints += estimate;
+            team = "Backend";
         } else if (issue.subteam === "Design") {
-            epicStats[epic].designPoints += estimate;
-            epicStats[epic].designUnknown += unestimated;
-            epicTotals.designPoints += estimate;
+            team = "Design";
         } else if (issue.subteam === "Frontend" || issue.subteam === "Front/Backend") {
-            epicStats[epic].fullstackPoints += estimate;
-            epicStats[epic].fullstackUnknown += unestimated;
-            epicTotals.fullstackPoints += estimate;
-        } else {
-            epicStats[epic].unknownPoints += estimate;
-            epicStats[epic].unknownUnknown += unestimated;
+            team = "Frontend";
         }
-        epicStats[epic].totalPoints += estimate;
+        epicStats[epic][team].points += estimate;
+        epicStats[epic][team].totalPoints += estimate;
+        epicStats[epic][team].unknown += unestimated;
+        if (unestimated > 0) {
+            epicStats[epic][team].jiras.push(issue.key);
+        }
+        epicTotals[team].points += estimate;
         epicTotals.totalPoints += estimate;
     });
 
@@ -119,14 +139,14 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
 
     const renderPts = points => (points > 0) ? `${Math.round(points)} pts` : "-";
 
-    const renderTeamPts = (points, unknown, team, column, idx) => {
-        if (!points && !unknown) {
+    const renderTeamPts = (teamStats, team, column, idx) => {
+        if (!teamStats.points && !teamStats.unknown) {
             return null;
         }
         return <div style={{...globalStyles.team(team), gridColumn: column, gridRow: 2+idx, textAlign: "center"}}>
-            {`${Math.round(points)} pts`}
-            {unknown > 0 && <span style={{color: "#c00"}}>
-                {" + " + unknown + " tasks"}
+            {`${Math.round(teamStats.points)} pts`}
+            {teamStats.unknown > 0 && <span style={{color: "#c00"}} title={teamStats.jiras.join(", ")}>
+                {" + " + teamStats.unknown + " tasks"}
             </span>}
         </div>
     }
@@ -144,10 +164,10 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
                     {epic.key}
                 </a>
             </div>,
-            renderTeamPts(stats.designPoints, stats.designUnknown, "Design", 3, idx),
-            renderTeamPts(stats.fullstackPoints, stats.fullstackUnknown, "Fullstack", 4, idx),
-            renderTeamPts(stats.backendPoints, stats.backendUnknown, "Backend", 5, idx),
-            renderTeamPts(stats.unknownPoints, stats.unknownUnknown, "", 6, idx),
+            renderTeamPts(stats.Design, "Design", 3, idx),
+            renderTeamPts(stats.Frontend, "Fullstack", 4, idx),
+            renderTeamPts(stats.Backend, "Backend", 5, idx),
+            renderTeamPts(stats.Unknown, "", 6, idx),
         ];
     });
 
@@ -157,13 +177,16 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
             Total committed
         </div>,
         <div style={{...globalStyles.team("Design"), gridColumn: 3, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
-            {renderPts(epicTotals.designPoints)}
+            {renderPts(epicTotals.Design.points)}
         </div>,
         <div style={{...globalStyles.team("Fullstack"), gridColumn: 4, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
-            {renderPts(epicTotals.fullstackPoints)}
+            {renderPts(epicTotals.Frontend.points)}
         </div>,
         <div style={{...globalStyles.team("Backend"), gridColumn: 5, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
-            {renderPts(epicTotals.backendPoints)}
+            {renderPts(epicTotals.Backend.points)}
+        </div>,
+        <div style={{...globalStyles.team(""), gridColumn: 6, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
+            {renderPts(epicTotals.Unknown.points)}
         </div>,
     ];
 
