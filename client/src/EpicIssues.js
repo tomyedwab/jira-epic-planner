@@ -90,7 +90,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
         <div style={{...style, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
             {issue.status}
         </div>,
-        issue.status === "To Do" && <div style={{...style, gridColumn: 6, gridRow: row + 1, fontSize: "12px", fontWeight: "900", textAlign: "center"}} key={issue.key + "::6"}>
+        !!issue.estimate && <div style={{...style, gridColumn: 6, gridRow: row + 1, fontSize: "12px", fontWeight: "900", textAlign: "center"}} key={issue.key + "::6"}>
             {`${issue.estimate || "-"}`}
         </div>,
     ];
@@ -247,7 +247,9 @@ export default function EpicIssues(props) {
         // Sort the subtasks as well
         const subtasks = issue.subtasks.slice().sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
         subtasks.forEach((subissue, subidx) => {
-            flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
+            if (showDone || subissue.status !== "Done") {
+                flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
+            }
         });
     });
 

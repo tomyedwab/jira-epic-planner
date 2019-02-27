@@ -63,29 +63,53 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
         const epic = issue.epic || "";
         epicStats[epic] = epicStats[epic] || {
             count: 0,
-            unestimated: 0,
+            designUnknown: 0,
             designPoints: 0,
+            fullstackUnknown: 0,
             fullstackPoints: 0,
+            backendUnknown: 0,
             backendPoints: 0,
+            unknownPoints: 0,
+            unknownUnknown: 0,
             totalPoints: 0,
         };
         epicStats[epic].count += 1;
-        if (!issue.estimate) {
-            epicStats[epic].unestimated += 1;
-        } else {
-            if (issue.subteam === "Backend") {
-                epicStats[epic].backendPoints += issue.estimate;
-                epicTotals.backendPoints += issue.estimate;
-            } else if (issue.subteam === "Design") {
-                epicStats[epic].designPoints += issue.estimate;
-                epicTotals.designPoints += issue.estimate;
+
+        let estimate = issue.estimate;
+        let unestimated = 0;
+        if (estimate === null) {
+            estimate = 0;
+            if (issue.subtasks.length > 0) {
+                issue.subtasks.forEach(subtask => {
+                    if (subtask.estimate !== null) {
+                        estimate += subtask.estimate;
+                    } else {
+                        unestimated += 1;
+                    }
+                })
             } else {
-                epicStats[epic].fullstackPoints += issue.estimate;
-                epicTotals.fullstackPoints += issue.estimate;
+                unestimated += 1;
             }
-            epicStats[epic].totalPoints += issue.estimate;
-            epicTotals.totalPoints += issue.estimate;
         }
+
+        if (issue.subteam === "Backend") {
+            epicStats[epic].backendPoints += estimate;
+            epicStats[epic].backendUnknown += unestimated;
+            epicTotals.backendPoints += estimate;
+        } else if (issue.subteam === "Design") {
+            epicStats[epic].designPoints += estimate;
+            epicStats[epic].designUnknown += unestimated;
+            epicTotals.designPoints += estimate;
+        } else if (issue.subteam === "Frontend" || issue.subteam === "Front/Backend") {
+            epicStats[epic].fullstackPoints += estimate;
+            epicStats[epic].fullstackUnknown += unestimated;
+            epicTotals.fullstackPoints += estimate;
+        } else {
+            epicStats[epic].unknownPoints += estimate;
+            epicStats[epic].unknownUnknown += unestimated;
+        }
+        epicStats[epic].totalPoints += estimate;
+        epicTotals.totalPoints += estimate;
     });
 
     const epicKeys = Object.keys(epicStats);
@@ -93,7 +117,19 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
         (epicStats[b].totalPoints - (b === "" ? 9999 : 0)) -
         (epicStats[a].totalPoints - (a === "" ? 9999 : 0))));
 
-    const renderPts = p => (p > 0) ? `${Math.round(p)} pts` : "-";
+    const renderPts = points => (points > 0) ? `${Math.round(points)} pts` : "-";
+
+    const renderTeamPts = (points, unknown, team, column, idx) => {
+        if (!points && !unknown) {
+            return null;
+        }
+        return <div style={{...globalStyles.team(team), gridColumn: column, gridRow: 2+idx, textAlign: "center"}}>
+            {`${Math.round(points)} pts`}
+            {unknown > 0 && <span style={{color: "#c00"}}>
+                {" + " + unknown + " tasks"}
+            </span>}
+        </div>
+    }
 
     const epicRows = epicKeys.map((epicKey, idx) => {
         const stats = epicStats[epicKey];
@@ -108,18 +144,10 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
                     {epic.key}
                 </a>
             </div>,
-            !!stats.designPoints && <div style={{...globalStyles.team("Design"), gridColumn: 3, gridRow: 2+idx, textAlign: "center"}}>
-                {renderPts(stats.designPoints)}
-            </div>,
-            !!stats.fullstackPoints && <div style={{...globalStyles.team("Fullstack"), gridColumn: 4, gridRow: 2+idx, textAlign: "center"}}>
-                {renderPts(stats.fullstackPoints)}
-            </div>,
-            !!stats.backendPoints && <div style={{...globalStyles.team("Backend"), gridColumn: 5, gridRow: 2+idx, textAlign: "center"}}>
-                {renderPts(stats.backendPoints)}
-            </div>,
-            stats.unestimated > 0 && <div style={{gridColumn: 6, gridRow: 2+idx, color: "#f00", textAlign: "center"}}>
-                {stats.unestimated} tasks
-            </div>,
+            renderTeamPts(stats.designPoints, stats.designUnknown, "Design", 3, idx),
+            renderTeamPts(stats.fullstackPoints, stats.fullstackUnknown, "Fullstack", 4, idx),
+            renderTeamPts(stats.backendPoints, stats.backendUnknown, "Backend", 5, idx),
+            renderTeamPts(stats.unknownPoints, stats.unknownUnknown, "", 6, idx),
         ];
     });
 
@@ -232,7 +260,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
                 Backend Team
             </div>
             <div style={{...globalStyles.heading, gridColumn: 6, gridRow: 1, textAlign: "center"}}>
-                Unestimated
+                Untagged
             </div>
 
             {teamRows}
