@@ -30,3 +30,6 @@ build/
 
 # Don't check in Gradle's cache
 .gradle
+
+# static data we don't want to check in to git either
+client/src/static.js
