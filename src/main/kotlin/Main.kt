@@ -3,10 +3,12 @@ package main.kotlin
 import io.ktor.application.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.request.header
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.content.TextContent
 import io.ktor.features.CallLogging
 import io.ktor.http.ContentType.Application.Json as ContentTypeJson
+import io.ktor.http.ContentType.Application.FormUrlEncoded as ContentTypeFormUrlEncoded
 import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
@@ -25,9 +27,17 @@ import java.util.*
 import java.util.logging.Level.ALL
 
 // TODO: Auto-clear cache after some timeout
+// TODO: Don't load epics twice?
+
+// Constants for our particular project
+val PingboardGroup = 260712
 
 @Serializable
-data class Secrets(val JiraToken: String)
+data class Secrets(
+    val JiraToken: String,
+    val PingboardClientId: String,
+    val PingboardSecret: String
+)
 
 // Data schema from the Jira API
 
@@ -167,6 +177,63 @@ data class DataCache(
         val sprints: Map<String, Sprint>
 )
 
+// Data schema from Pingboard
+
+@Serializable
+data class TokenResult(
+        val access_token: String
+)
+
+@Serializable
+data class UserStatus(
+        val id: String,
+        val message: String?,
+        val starts_at: String,
+        val ends_at: String,
+        val status_type_id: Int
+)
+
+@Serializable
+data class User(
+        val id: String,
+        val first_name: String,
+        val last_name: String,
+        @Optional var ooos: List<UserStatus> = emptyList()
+)
+
+@Serializable
+data class GroupLinkedResult(
+        val users: List<User>
+)
+
+@Serializable
+data class GroupResult(
+        val linked: GroupLinkedResult
+)
+
+@Serializable
+data class StatusType(
+        val id: String,
+        val slug: String
+)
+
+@Serializable
+data class StatusLinkedResult(
+        val status_types: List<StatusType>
+)
+
+@Serializable
+data class StatusResult(
+        val statuses: List<UserStatus>,
+        @Optional val linked: StatusLinkedResult? = null
+)
+
+@Serializable
+data class TeamCache(
+        val updateTime: Long,
+        val members: List<User>
+)
+
 fun getIssueSubteam(issue: IssueResult): String? = when {
     issue.fields.issuetype.name == "Design Task" -> "Design"
     issue.fields.labels?.contains("frontend") ?: false && issue.fields.labels?.contains("backend") ?: false -> "Front/Backend"
@@ -230,7 +297,6 @@ fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): L
     } ?: emptyList()
 }
 
-
 suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpClient, secrets: Secrets, serializer: DeserializationStrategy<V>, query: String): List<T> {
     var startAt = 0
     val results = ArrayList<T>()
@@ -261,6 +327,7 @@ suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets)
     val sprints = HashMap<String, Sprint>()
 
     println("Loading issues...")
+    // TODO: Move this to top constants area
     val issueResults = issueSearchRequest<IssueResult, IssueResults>(client, secrets, IssueResults.serializer(),
             "Project=CP OR Project=IC")
     val issues = issueResults.map { Issue(
@@ -279,6 +346,48 @@ suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets)
     return DataCache(Date().time, epics, issues, sprints)
 }
 
+suspend fun updatePingboardData(client: io.ktor.client.HttpClient, secrets: Secrets): TeamCache {
+    println("Getting Pingboard access token...")
+    val responseText = client.post<String>("https://app.pingboard.com/oauth/token?grant_type=client_credentials") {
+        body = TextContent("client_id=${secrets.PingboardClientId}&client_secret=${secrets.PingboardSecret}", ContentTypeFormUrlEncoded)
+    }
+    val tokenResult = JSON.nonstrict.parse(TokenResult.serializer(), responseText)
+
+    // Get the group data
+    println("Getting user information...")
+    val groupResponseText = client.get<String>("https://app.pingboard.com/api/v2/groups/${PingboardGroup}?include=users") {
+        header("Authorization", "Bearer ${tokenResult.access_token}")
+    }
+
+    val groupResult = JSON.nonstrict.parse(GroupResult.serializer(), groupResponseText)
+
+    var oooTypeId: String? = null
+    groupResult.linked.users.forEach {
+        println("Loading statuses for ${it.first_name} ${it.last_name}")
+        val include = if (oooTypeId == null) "status_type" else ""
+        val statusResponseText = client.get<String>("https://app.pingboard.com/api/v2/statuses?include=${include}&user_id=${it.id}&page_size=999") {
+            header("Authorization", "Bearer ${tokenResult.access_token}")
+        }
+        val statusResponse = JSON.nonstrict.parse(StatusResult.serializer(), statusResponseText)
+        if (oooTypeId == null && statusResponse.linked != null) {
+            for (type in statusResponse.linked.status_types) {
+                if (type.slug == "flex-time-off") {
+                    oooTypeId = type.id
+                    break
+                }
+            }
+        }
+        if (oooTypeId == null) {
+            println("Error: flex-time-off status type not found!")
+        }
+        it.ooos = statusResponse.statuses.filter { it.status_type_id.toString() == oooTypeId }
+    }
+
+    println("Loaded data from Pingboard API.")
+
+    return TeamCache(Date().time, groupResult.linked.users)
+}
+
 fun main(args: Array<String>) {
     // Set up logging
     val log = Logger.getLogger("my.logger")
@@ -294,7 +403,9 @@ fun main(args: Array<String>) {
     // HTTP client to use to talk to Jira API
     val client = io.ktor.client.HttpClient(Apache)
 
-    val issueCache = HashMap<String, HashMap<Int, String>>();
+    var teamCache: TeamCache = runBlocking {
+        updatePingboardData(client, secrets)
+    }
 
     var dataCache: DataCache = runBlocking {
         updateDataCache(client, secrets)
@@ -318,7 +429,7 @@ fun main(args: Array<String>) {
                 }
             }
 
-            get("/api/all") {
+            get("/api/jira") {
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 if (force == "true") {
                     dataCache = runBlocking {
@@ -328,25 +439,14 @@ fun main(args: Array<String>) {
                 call.respondText(JSON.stringify(DataCache.serializer(), dataCache), ContentTypeJson)
             }
 
-            get("/api/issues") {
-                val startAt: Int = call.request.queryParameters["startAt"]?.toInt() ?: 0
+            get("/api/pingboard") {
                 val force: String = call.request.queryParameters["force"] ?: "false"
-                val epic: String = call.request.queryParameters["epic"]!!
-                if (force != "true" && issueCache.containsKey(epic) && issueCache[epic]!!.containsKey(startAt)) {
-                    call.respondText(issueCache[epic]!![startAt]!!, ContentTypeJson)
-                } else {
-                    println("Loading epic issues for $epic ($startAt)...")
-                    val responseText = client.post<String>("https://khanacademy.atlassian.net/rest/api/2/search") {
-                        body = TextContent("{\"jql\":\"\\\"Epic Link\\\"=$epic\",\"startAt\":$startAt}", ContentTypeJson)
-                        val token = secrets.JiraToken
-                        header("Authorization", "Basic $token")
+                if (force == "true") {
+                    teamCache = runBlocking {
+                        updatePingboardData(client, secrets)
                     }
-                    if (!issueCache.containsKey(epic)) {
-                        issueCache[epic] = HashMap<Int, String>()
-                    }
-                    issueCache[epic]!![startAt] = responseText
-                    call.respondText(responseText, ContentTypeJson)
                 }
+                call.respondText(JSON.stringify(TeamCache.serializer(), teamCache), ContentTypeJson)
             }
         }
     }

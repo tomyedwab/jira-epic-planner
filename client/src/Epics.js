@@ -46,7 +46,7 @@ const getOOOOverlap = (memberOOOs, sprintDays) => {
     return [OOOs, total];
 };
 
-const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, supportRotation) => {
+const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers) => {
     // TODO: Alternate row shading
 
     const sprintDays = getSprintDays(sprint);
@@ -196,15 +196,26 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
         backendPoints: 0,
     };
 
-    const teamRows = Object.keys(team).map((id, idx) => {
-        const member = team[id];
-        const [OOOs, OOOTotal] = getOOOOverlap(teamOOOs[id] || [], sprintDays);
-        const onSupport = supportRotation[sprint.name] === id;
-        const points = Math.max(member.allocation - OOOTotal - (onSupport ? 1 : 0), 0);
+    const teamMemberInfo = teamMembers.map(member => {
+        const [OOOs, OOOTotal] = getOOOOverlap(member.ooos || [], sprintDays);
+        const onSupport = (member.supportRotations || []).indexOf(sprint.name) >= 0;
+        const points = Math.max((member.allocation || 0) - OOOTotal - (onSupport ? 1 : 0), 0);
+        return {
+            ...member,
+            OOOs,
+            OOOTotal,
+            onSupport,
+            points
+        };
+    });
 
+    const memberSortValue = memberInfo => (memberInfo.points + (memberInfo.team === "Design" ? 3000 : (memberInfo.team === "Fullstack" ? 2000 : (memberInfo.team === "Backend" ? 1000 : 0))));
+    teamMemberInfo.sort((a, b) => memberSortValue(b) - memberSortValue(a));
+
+    const teamRows = teamMemberInfo.map((memberInfo, idx) => {
         let OOOsText = "";
-        if (OOOs.length > 0) {
-            OOOsText = " [OOO " + OOOs.map(ooo => {
+        if (memberInfo.OOOs.length > 0) {
+            OOOsText = " [OOO " + memberInfo.OOOs.map(ooo => {
                 const start = shortDate(ooo.start);
                 const end = shortDate(ooo.end);
                 if (start === end) {
@@ -215,47 +226,49 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
             }).join(", ") + "]";
         }
 
-        const supportText = onSupport ? " [Support]" : "";
+        const supportText = memberInfo.onSupport ? " [Support]" : "";
 
         let col = null;
-        if (member.team === "Design") {
+        if (memberInfo.team === "Design") {
             col = 3;
-            teamTotals.designPoints += points;
-        } else if (member.team === "Fullstack") {
+            teamTotals.designPoints += memberInfo.points;
+        } else if (memberInfo.team === "Fullstack") {
             col = 4;
-            teamTotals.fullstackPoints += points;
-        } else if (member.team === "Backend") {
+            teamTotals.fullstackPoints += memberInfo.points;
+        } else if (memberInfo.team === "Backend") {
             col = 5;
-            teamTotals.backendPoints += points;
+            teamTotals.backendPoints += memberInfo.points;
         }
 
         return [
             <div style={{...globalStyles.tableRow(idx), gridColumnStart: 1, gridColumnEnd: 7, gridRow: 2+idx}} />,
             <div style={{gridColumn: 1, gridRow: idx+2}}>
-                {member.name}
+                {memberInfo.first_name}
             </div>,
             <div style={{gridColumn: 2, gridRow: idx+2, fontWeight: "bold"}}>
                 {OOOsText}
                 {supportText}
             </div>,
-            col && <div style={{...globalStyles.team(member.team), gridColumn: col, gridRow: idx+2, textAlign: "center"}}>
-                {renderPts(points)}
+            col && <div style={{...globalStyles.team(memberInfo.team), gridColumn: col, gridRow: idx+2, textAlign: "center"}}>
+                {renderPts(memberInfo.points)}
             </div>,
         ];
     });
 
+    const teamTotalRowIdx = 2+teamMembers.length;
+
     const teamTotalRow = [
-        <div style={{...globalStyles.tableRow(Object.keys(team).length), ...styles.finalRow, gridColumnStart: 1, gridColumnEnd: 7, gridRow: 2+Object.keys(team).length}} />,
-        <div style={{gridColumn: 1, gridRow: 2+Object.keys(team).length, fontWeight: "bold"}}>
+        <div style={{...globalStyles.tableRow(teamMembers.length), ...styles.finalRow, gridColumnStart: 1, gridColumnEnd: 7, gridRow: teamTotalRowIdx}} />,
+        <div style={{gridColumn: 1, gridRow: teamTotalRowIdx, fontWeight: "bold"}}>
             Total available
         </div>,
-        <div style={{...globalStyles.team("Design"), gridColumn: 3, gridRow: 2+Object.keys(team).length, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.team("Design"), gridColumn: 3, gridRow: teamTotalRowIdx, fontWeight: "bold", textAlign: "center"}}>
             {renderPts(teamTotals.designPoints)}
         </div>,
-        <div style={{...globalStyles.team("Fullstack"), gridColumn: 4, gridRow: 2+Object.keys(team).length, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.team("Fullstack"), gridColumn: 4, gridRow: teamTotalRowIdx, fontWeight: "bold", textAlign: "center"}}>
             {renderPts(teamTotals.fullstackPoints)}
         </div>,
-        <div style={{...globalStyles.team("Backend"), gridColumn: 5, gridRow: 2+Object.keys(team).length, fontWeight: "bold", textAlign: "center"}}>
+        <div style={{...globalStyles.team("Backend"), gridColumn: 5, gridRow: teamTotalRowIdx, fontWeight: "bold", textAlign: "center"}}>
             {renderPts(teamTotals.backendPoints)}
         </div>,
     ];
@@ -300,8 +313,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, team, teamOOOs, suppo
 
 export default function Epics(props) {
     const {epics, issues, sprints, loading, forceReload} = props;
-    const [team, OOOs, supportRotation, pingLoading] = usePingboardData();
-    const [highlighted, setHighlighted] = useState(null);
+    const [teamMembers, pingLoading, forcePingReload] = usePingboardData();
 
     const orderedSprints = (
         Object.values(sprints)
@@ -319,7 +331,7 @@ export default function Epics(props) {
                 sprint, epicMap,
                 issues.filter(issue => issue.sprints.indexOf(sprint.id) >= 0),
                 props.selectEpic,
-                team, OOOs, supportRotation,
+                teamMembers,
             )
         ))}
         <div style={{...globalStyles.fontStyle, padding: 8}}>
@@ -331,6 +343,10 @@ export default function Epics(props) {
         <p>
             {loading ? "Loading epics..." : `${epics.length} epics loaded. `}
             {!loading && <button onClick={forceReload}>Reload</button>}
+        </p>
+        <p>
+            {pingLoading ? "Loading team member info..." : `${teamMembers.length} team members loaded. `}
+            {!pingLoading && <button onClick={forcePingReload}>Reload</button>}
         </p>
     </div>;
 }

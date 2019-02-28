@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import {PINGBOARD_DATA} from './static.js';
+import {TEAM_MEMBER_DATA} from './static.js';
 
 window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
@@ -17,7 +17,7 @@ export function useJiraData() {
             setLoading(true);
         }
         const force = reloadNum > 0;
-        fetch(`/api/all?force=${force}`)
+        fetch(`/api/jira?force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 data.epics.forEach(epic => window.ALL_EPICS[epic.key] = epic);
@@ -55,18 +55,27 @@ export function useJiraData() {
 }
 
 export function usePingboardData() {
-    const [team, setTeam] = useState({});
-    const [OOOs, setOOO] = useState({});
-    const [supportRotation, setSupportRotation] = useState({});
+    const [reloadNum, setReloadNum] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [teamMembers, setTeamMembers] = useState({});
 
     useEffect(() => {
-        // Just hard-code this for now
-        setTeam(PINGBOARD_DATA.TEAM_MEMBERS);
-        setOOO(PINGBOARD_DATA.OOO);
-        setSupportRotation(PINGBOARD_DATA.SUPPORT);
-        setLoading(false);
-    });
+        const force = reloadNum > 0;
+        fetch(`/api/pingboard?force=${force}`)
+            .then(resp => resp.json())
+            .then(data => {
+                setTeamMembers(data.members.map(member => ({
+                    ...member,
+                    ...TEAM_MEMBER_DATA[member.id],
+                    ooos: member.ooos.map(ooo => ({
+                        ...ooo,
+                        start: new Date(ooo.starts_at),
+                        end: new Date(ooo.ends_at),
+                    })),
+                })));
+                setLoading(false);
+            });
+    }, [reloadNum]);
 
-    return [team, OOOs, supportRotation, loading];
+    return [teamMembers, loading, () => setReloadNum(reloadNum + 1)];
 }
