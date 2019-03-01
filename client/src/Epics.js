@@ -5,6 +5,7 @@ import globalStyles from './styles.js';
 
 // TODO: Company holidays
 // TODO: Highlight overcommit
+// TODO: Way to view issues in "No epic"
 
 const renderEpic = (epic, row, selectEpic) => {
     return [
@@ -312,8 +313,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers) => {
 };
 
 export default function Epics(props) {
-    const {epics, issues, sprints, loading, forceReload} = props;
-    const [teamMembers, pingLoading, forcePingReload] = usePingboardData();
+    const {epics, issues, sprints, loading, forceReload, teamMembers, pingLoading, forcePingReload} = props;
 
     const orderedSprints = (
         Object.values(sprints)

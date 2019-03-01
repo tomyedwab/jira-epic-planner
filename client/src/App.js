@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 
-import {useJiraData} from './Api.js';
+import {useJiraData, usePingboardData} from './Api.js';
 import Epics from './Epics.js';
 import EpicIssues from './EpicIssues.js';
 
@@ -23,6 +23,7 @@ function useLocation(cb, ready) {
 
 const App = () => {
     const [epics, issues, sprints, loading, forceReload] = useJiraData();
+    const [teamMembers, pingLoading, forcePingReload] = usePingboardData();
     const [selectedEpic, selectEpic] = useState(null);
 
     const setLocation = useLocation(path => {
@@ -47,7 +48,7 @@ const App = () => {
         const filteredIssues = issues.filter(issue => issue.epic === selectedEpic.key);
         return <EpicIssues epic={selectedEpic} loading={loading} issues={filteredIssues} sprints={sprints} forceReload={forceReload} clearSelectedEpic={() => setSelectedEpic(null)} />
     }
-    return <Epics epics={epics} issues={issues} sprints={sprints} loading={loading} forceReload={forceReload} selectEpic={setSelectedEpic} />;
+    return <Epics epics={epics} issues={issues} sprints={sprints} loading={loading} forceReload={forceReload} selectEpic={setSelectedEpic} teamMembers={teamMembers} pingLoading={pingLoading} forcePingReload={forcePingReload} />;
 };
 
 export default App;

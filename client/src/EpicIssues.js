@@ -24,6 +24,13 @@ const ISSUE_PRIORITIES = {
     "To Do": 1000000,
 };
 
+const SUBTEAM_PRIORITIES = {
+    "Design": 0.05,
+    "Frontend": 0.04,
+    "Front/Backend": 0.03,
+    "Backend": 0.02,
+};
+
 const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     // TODO: Include dependencies in sort
     let priority = 0;
@@ -59,6 +66,9 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     if (issue.assignee) {
         priority += 0.5;
     }
+
+    // (??) sort: Subteam
+    priority += SUBTEAM_PRIORITIES[issue.subteam];
 
     return priority;
 }

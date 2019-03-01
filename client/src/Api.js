@@ -21,31 +21,35 @@ export function useJiraData() {
             .then(resp => resp.json())
             .then(data => {
                 data.epics.forEach(epic => window.ALL_EPICS[epic.key] = epic);
-                data.issues.forEach(issue => {
-                    window.ALL_ISSUES[issue.key] = issue;
-                });
-                data.issues.forEach(issue => {
-                    issue.subtasks = issue.subtasks.map(issueKey => window.ALL_ISSUES[issueKey]);
-                });
-                data.issues.filter(issue => {
-                    let retain = true;
-                    issue.blocks.forEach(blockedKey => {
-                        const blockedIssue = window.ALL_ISSUES[blockedKey];
-                        if (!blockedIssue) {
-                            console.log("Cannot find blocked issue", blockedKey);
-                            return;
-                        }
-                        blockedIssue.blockedBy = issue;
-                        if (issue.type === "Design Task" && blockedIssue.type === "Story") {
-                            retain = false;
-                            blockedIssue.subtasks.push(issue);
-                        }
-                    });
-                    return retain;
-                });
 
                 setEpics(data.epics);
-                setIssues(data.issues);
+                setIssues(
+                    data.issues.map(issue => {
+                        window.ALL_ISSUES[issue.key] = issue;
+                        return issue;
+                    }).map(issue => ({
+                        ...issue,
+                        subtasks: issue.subtasks.map(issueKey => window.ALL_ISSUES[issueKey]),
+                    })).filter(issue => {
+                        if (issue.type === "Epic" || issue.type === "Sub-task") {
+                            return false;
+                        }
+                        let retain = true;
+                        issue.blocks.forEach(blockedKey => {
+                            const blockedIssue = window.ALL_ISSUES[blockedKey];
+                            if (!blockedIssue) {
+                                console.log("Cannot find blocked issue", blockedKey);
+                                return;
+                            }
+                            blockedIssue.blockedBy = issue;
+                            if (issue.type === "Design Task" && blockedIssue.type === "Story") {
+                                retain = false;
+                                blockedIssue.subtasks.push(issue);
+                            }
+                        });
+                        return retain;
+                    })
+                );
                 setSprints(data.sprints);
                 setLoading(false);
             });

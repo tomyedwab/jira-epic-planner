@@ -31,6 +31,7 @@ import java.util.logging.Level.ALL
 
 // Constants for our particular project
 val PingboardGroup = 260712
+val ProjectFilter = "(Project=CP OR Project=IC) AND (resolved is EMPTY OR resolved >= -180d) AND (labels IS EMPTY OR labels != \\\"from-asana\\\")"
 
 @Serializable
 data class Secrets(
@@ -329,7 +330,7 @@ suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets)
     println("Loading issues...")
     // TODO: Move this to top constants area
     val issueResults = issueSearchRequest<IssueResult, IssueResults>(client, secrets, IssueResults.serializer(),
-            "Project=CP OR Project=IC")
+            ProjectFilter)
     val issues = issueResults.map { Issue(
             it.key, it.fields.issuetype.name, it.fields.summary, it.fields.customfield_10006,
             it.fields.assignee?.displayName, it.fields.status.name,
