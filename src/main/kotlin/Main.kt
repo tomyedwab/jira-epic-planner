@@ -43,22 +43,6 @@ data class Secrets(
 // Data schema from the Jira API
 
 @Serializable
-data class EpicResultFields(
-        val summary: String,
-        // Short name
-        val customfield_10003: String
-)
-
-@Serializable
-data class EpicResult(
-        val expand: String,
-        val id: String,
-        val key: String,
-        val self: String,
-        val fields: EpicResultFields
-)
-
-@Serializable
 data class IssueResultType(
         val name: String
 )
@@ -99,6 +83,8 @@ data class IssueResultFields(
         @Optional val customfield_10105: Float? = null,
         // Epic key
         @Optional val customfield_10006: String? = null,
+        // Epic short name
+        @Optional val customfield_10003: String? = null,
         // Sprint links (garbled)
         @Optional val customfield_10103: Array<String>? = null,
         @Optional val labels: Array<String>? = null,
@@ -118,15 +104,6 @@ data class IssueResult(
 interface APIResults<T> {
     val issues: Array<T>
 }
-
-@Serializable
-data class EpicResults(
-        @Optional val expand: String = "",
-        val startAt: Int,
-        val maxResults: Int,
-        val total: Int,
-        override val issues: Array<EpicResult>
-): APIResults<EpicResult>
 
 @Serializable
 data class IssueResults(
@@ -320,26 +297,27 @@ suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpC
 }
 
 suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets): DataCache {
-    println("Loading epics...")
-    val epicResults = issueSearchRequest<EpicResult, EpicResults>(client, secrets, EpicResults.serializer(),
-            "Project=CP AND \\\"Epic Name\\\" IS NOT NULL AND \\\"Epic Status\\\" != \\\"Done\\\"")
-    val epics = epicResults.map { Epic(it.key, it.fields.summary, it.fields.customfield_10003) }
-
     val sprints = HashMap<String, Sprint>()
 
     println("Loading issues...")
-    // TODO: Move this to top constants area
     val issueResults = issueSearchRequest<IssueResult, IssueResults>(client, secrets, IssueResults.serializer(),
             ProjectFilter)
-    val issues = issueResults.map { Issue(
-            it.key, it.fields.issuetype.name, it.fields.summary, it.fields.customfield_10006,
-            it.fields.assignee?.displayName, it.fields.status.name,
-            it.fields.customfield_10105, getIssueSubteam(it), it.fields.subtasks?.map { it.key } ?: emptyList(),
-            extractIssueSprints(it, sprints),
-            it.fields.issuelinks?.mapNotNull { when {
-                it.type.name == "Blocks" -> it.outwardIssue?.key
-                else -> null
-            } } ?: emptyList()
+
+    val epics = issueResults
+            .filter { it.fields.customfield_10003 != null }
+            .map { Epic(it.key, it.fields.summary, it.fields.customfield_10003!!) }
+
+    val issues = issueResults
+            .filter { it.fields.customfield_10003 == null }
+            .map { Issue(
+                it.key, it.fields.issuetype.name, it.fields.summary, it.fields.customfield_10006,
+                it.fields.assignee?.displayName, it.fields.status.name,
+                it.fields.customfield_10105, getIssueSubteam(it), it.fields.subtasks?.map { it.key } ?: emptyList(),
+                extractIssueSprints(it, sprints),
+                it.fields.issuelinks?.mapNotNull { when {
+                    it.type.name == "Blocks" -> it.outwardIssue?.key
+                    else -> null
+                } } ?: emptyList()
     ) }
 
     println("Loaded data from Jira API.")
