@@ -1,6 +1,5 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {getSprintDateStr, getSprintDays, shortDate} from './util';
-import {usePingboardData} from './Api.js';
 
 // TODO: Company holidays
 // TODO: Highlight overcommit
