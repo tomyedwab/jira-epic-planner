@@ -1,13 +1,12 @@
 import React, {useState} from 'react';
 import {getSprintDateStr, getSprintDays, shortDate} from './util';
 import {usePingboardData} from './Api.js';
-import globalStyles from './styles.js';
 
 // TODO: Company holidays
 // TODO: Highlight overcommit
 // TODO: Way to view issues in "No epic"
 
-const renderEpic = (epic, row, selectEpic) => {
+const renderEpic = (epic, row, selectEpic, globalStyles) => {
     return [
         <div style={{gridColumn: 1, gridRow: row + 1}} key={epic.key + "::1"}>
             {epic.shortName}
@@ -47,7 +46,7 @@ const getOOOOverlap = (memberOOOs, sprintDays) => {
     return [OOOs, total];
 };
 
-const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers) => {
+const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalStyles) => {
     // TODO: Alternate row shading
 
     const sprintDays = getSprintDays(sprint);
@@ -281,7 +280,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers) => {
                 <div style={globalStyles.sprintDate}>{getSprintDateStr(sprint)}</div>
             </div>
             <div style={{textAlign: "right"}}>
-                <div style={styles.sprintState(sprint.state)}>{sprint.state}</div>
+                <div style={{...globalStyles.fontStyle, ...styles.sprintState(sprint.state)}}>{sprint.state}</div>
                 <div style={globalStyles.issueCount}>{issues.length} issues</div>
             </div>
         </div>
@@ -313,7 +312,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers) => {
 };
 
 export default function Epics(props) {
-    const {epics, issues, sprints, loading, forceReload, teamMembers, pingLoading, forcePingReload} = props;
+    const {epics, issues, sprints, loading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
 
     const orderedSprints = (
         Object.values(sprints)
@@ -332,12 +331,13 @@ export default function Epics(props) {
                 issues.filter(issue => issue.sprints.indexOf(sprint.id) >= 0),
                 props.selectEpic,
                 teamMembers,
+                globalStyles,
             )
         ))}
         <div style={{...globalStyles.fontStyle, padding: 8}}>
             <div style={globalStyles.pageTitle}>All epics</div>
             <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `300px 80px auto`, marginLeft: 12}}>
-                {epics.map((epic, row) => renderEpic(epic, row, () => props.selectEpic(epic)))}
+                {epics.map((epic, row) => renderEpic(epic, row, () => props.selectEpic(epic), globalStyles))}
             </div>
         </div>
         <p>
@@ -363,7 +363,6 @@ const styles = {
     },
 
     sprintState: (state) => ({
-        ...globalStyles.fontStyle,
         backgroundColor: stateColors[state],
         borderRadius: 4,
         color: "#fff",

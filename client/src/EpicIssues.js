@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import {getSprintDateStr} from './util';
-import globalStyles from "./styles.js";
 
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
@@ -73,13 +72,8 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     return priority;
 }
 
-const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, setHover) => {
-    const style = {
-        paddingTop: isNested ? 4 : 8,
-        paddingBottom: isLast ? 8 : 4,
-        color: (issue.status === "Done") ? "#aaa": "#000",
-        fontSize: "14px",
-    };
+const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, setHover, globalStyles) => {
+    const style = globalStyles.issueStyle(isNested, isLast, issue.status);
 
     const hovering = hoverItem === issue.key;
     const backgroundColor = hovering ? "rgba(0, 0, 0, 15%)" : (!!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)"); 
@@ -94,13 +88,13 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
         <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.summary}>
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={globalStyles.jiraLink}>{issue.key}</a>
         </div>,
-        <div style={{...style, ...globalStyles.team(issue.subteam), gridColumn: 4, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::4"}>
+        <div style={{...style, ...globalStyles.team(issue.subteam), ...globalStyles.teamColumn, gridColumn: 4, gridRow: row + 1}} key={issue.key + "::4"}>
             {issue.subteam}
         </div>,
-        <div style={{...style, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1, fontSize: "12px", fontWeight: "bold", textAlign: "center"}} key={issue.key + "::5"}>
+        <div style={{...style, ...globalStyles.statusColumn, gridColumnStart: 5, gridColumnEnd: issue.status === "To Do" ? 6 : 7, gridRow: row + 1}} key={issue.key + "::5"}>
             {issue.status}
         </div>,
-        !!issue.estimate && <div style={{...style, gridColumn: 6, gridRow: row + 1, fontSize: "12px", fontWeight: "900", textAlign: "center"}} key={issue.key + "::6"}>
+        !!issue.estimate && <div style={{...style, ...globalStyles.estimateColumn, gridColumn: 6, gridRow: row + 1}} key={issue.key + "::6"}>
             {`${issue.estimate || "-"}`}
         </div>,
     ];
@@ -129,7 +123,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
 
     if (issue.status === "Done") {
         issueColor = "#00a60e";
-        issueIcon = <svg viewBox="-6 -6 60 60" width={"24px"} height={"24px"} style={{verticalAlign: "top", float: "right", marginRight: 8}}>
+        issueIcon = <svg viewBox="-6 -6 60 60" style={globalStyles.issueIconContainer}>
             <polygon fill="#ffffff" points="40.6,12.1 17,35.7 7.4,26.1 4.6,31 17,43.3 43.4,16.9"/>
         </svg>;
     } else {
@@ -145,22 +139,9 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
         }
 
         if (issue.assignee) {
-            const assigneeStyle = {
-                backgroundColor: "#fff",
-                float: "right",
-                borderRadius: 14,
-                margin: 2,
-                padding: 4,
-                fontSize: "12px",
-                fontWeight: "bold",
-                minWidth: 18,
-                minHeight: 14,
-                textAlign: "center",
-            };
-
             const initials = issue.assignee ? issue.assignee.split(" ").map(x => x[0]).join("").toUpperCase() : null;
 
-            issueIcon = <div style={assigneeStyle}>
+            issueIcon = <div style={globalStyles.assignee}>
                 {initials}
             </div>;
         }
@@ -168,7 +149,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
 
     spans.forEach((span, idx) => {
         ret.push(<div style={{gridColumnStart: SEND+span.start, gridColumnEnd: SEND+1+span.end, gridRow: row + 1, padding: 4}} key={issue.key + "::S" + idx}>
-            <div style={{backgroundColor: issueColor, width: "100%", height: "100%", borderRadius: 16}}>
+            <div style={globalStyles.issueGantt(issueColor)}>
                 {(idx === spans.length - 1) && issueIcon}
             </div>
         </div>);
@@ -178,7 +159,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
 };
 
 export default function EpicIssues(props) {
-    const {issues, sprints, loading, forceReload} = props;
+    const {issues, sprints, loading, forceReload, globalStyles} = props;
     const [showDone, setShowDone] = useState(false);
     const [showFrontend, setShowFrontend] = useState(true);
     const [showBackend, setShowBackend] = useState(true);
@@ -338,17 +319,15 @@ export default function EpicIssues(props) {
         {sprint.name.split("-")[1]}
     </div>);
 
-    const columnTemplate = `20px auto 75px 90px 140px 30px repeat(${sortedSprints.length}, 50px)`;
-
     return <div style={{...globalStyles.fontStyle, ...globalStyles.table, display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>
-        <div style={{ display: "grid", width: "calc(100% - 15px)", gridTemplateColumns: columnTemplate, overflowY: "visible", flex: "0 0 68px"}}>
+        <div style={{...globalStyles.issueColumns(sortedSprints.length), width: "calc(100% - 15px)", overflowY: "visible", flex: "0 0 68px"}}>
             {highlightColumn1}
             {header0}
             {header1}
             {header2}
             {header3}
         </div>
-        <div style={{ display: "grid", overflowY: "scroll", width: "100%", gridTemplateColumns: columnTemplate, gridTemplateRows: `repeat(${flattenedIssues.length}, 35px)` }}>
+        <div style={{...globalStyles.issueColumns(sortedSprints.length), ...globalStyles.issueRows(flattenedIssues.length), width: "100%"}}>
             {highlightColumn2}
             {flattenedIssues.map((info, row) => renderIssue(info, row, sortedSprints, hoverItem, (key, over) => {
                 if (over) {
@@ -356,7 +335,7 @@ export default function EpicIssues(props) {
                 } else if (hoverItem === key) {
                     setHoverItem(null);
                 }
-            }))}
+            }, globalStyles))}
         </div>
     </div>;
 }
