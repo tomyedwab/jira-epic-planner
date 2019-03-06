@@ -311,7 +311,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
 };
 
 export default function Epics(props) {
-    const {epics, issues, sprints, loading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
+    const {epics, issues, sprints, jiraLoading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
 
     const orderedSprints = (
         Object.values(sprints)
@@ -340,8 +340,8 @@ export default function Epics(props) {
             </div>
         </div>
         <p>
-            {loading ? "Loading epics..." : `${epics.length} epics loaded. `}
-            {!loading && <button onClick={forceReload}>Reload</button>}
+            {jiraLoading ? "Loading epics..." : `${epics.length} epics loaded. `}
+            {!jiraLoading && <button onClick={forceReload}>Reload</button>}
         </p>
         <p>
             {pingLoading ? "Loading team member info..." : `${teamMembers.length} team members loaded. `}

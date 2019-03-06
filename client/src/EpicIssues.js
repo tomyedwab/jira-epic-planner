@@ -30,6 +30,8 @@ const SUBTEAM_PRIORITIES = {
     "Backend": 0.02,
 };
 
+const SHOW_ISSUE_PRIORITIES = false;
+
 const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     // TODO: Include dependencies in sort
     let priority = 0;
@@ -67,12 +69,14 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     }
 
     // (??) sort: Subteam
-    priority += SUBTEAM_PRIORITIES[issue.subteam];
+    if (SUBTEAM_PRIORITIES[issue.subteam]) {
+        priority += SUBTEAM_PRIORITIES[issue.subteam];
+    }
 
     return priority;
 }
 
-const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, setHover, globalStyles) => {
+const renderIssue = ([isNested, isLast, issue, priority], row, sortedSprints, hoverItem, setHover, globalStyles) => {
     const style = globalStyles.issueStyle(isNested, isLast, issue.status);
 
     const hovering = hoverItem === issue.key;
@@ -84,6 +88,7 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
             <img src={ISSUE_ICONS[issue.type]} style={{marginRight: 6, verticalAlign: "bottom"}} />
             {" "}
             {issue.summary}
+            {SHOW_ISSUE_PRIORITIES && <span style={{float: "right"}}>{priority}</span>}
         </div>,
         <div style={{...style, gridColumn: 3, gridRow: row + 1, textAlign: "left"}} key={issue.key + "::3"} title={issue.summary}>
             <a href={`https://khanacademy.atlassian.net/browse/${issue.key}`} target="_blank" style={globalStyles.jiraLink}>{issue.key}</a>
@@ -159,8 +164,8 @@ const renderIssue = ([isNested, isLast, issue], row, sortedSprints, hoverItem, s
 };
 
 export default function EpicIssues(props) {
-    const {issues, sprints, loading, forceReload, globalStyles} = props;
-    const [showDone, setShowDone] = useState(false);
+    const {issues, sprints, loading, forceReload, globalStyles, clearSelectedEpic, hideNav, updateTime} = props;
+    const [showDone, setShowDone] = useState(true);
     const [showFrontend, setShowFrontend] = useState(true);
     const [showBackend, setShowBackend] = useState(true);
     const [showDesign, setShowDesign] = useState(true);
@@ -233,13 +238,13 @@ export default function EpicIssues(props) {
 
     const flattenedIssues = [];
     filteredIssues.forEach((issue, idx) => {
-        flattenedIssues.push([false, issue.subtasks.length === 0, issue]);
+        flattenedIssues.push([false, issue.subtasks.length === 0, issue, issuePriorities[issue.key]]);
 
         // Sort the subtasks as well
         const subtasks = issue.subtasks.slice().sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
         subtasks.forEach((subissue, subidx) => {
             if (showDone || subissue.status !== "Done") {
-                flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue]);
+                flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue, issuePriorities[subissue.key]]);
             }
         });
     });
@@ -254,6 +259,7 @@ export default function EpicIssues(props) {
     let headerContent = <span>Loading issues...</span>;
     if (!loading) {
         headerContent = [
+            updateTime && <span>Updated {updateTime.toLocaleDateString()} {updateTime.toLocaleTimeString()}. </span>,
             <span>{`Showing ${filteredIssues.length} of ${issues.length} issues.`}</span>,
             <button style={{margin: 4, background: "none", border: "none", color: "#1865f2"}} onClick={() => setShowFilters(!showFilters)} title="Filters">
                 <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -286,10 +292,11 @@ export default function EpicIssues(props) {
 
     const header0 = [
         <div style={{gridColumnStart: 1, gridColumnEnd: SEND, gridRowStart: 1, gridRowEnd: 3}}>
-            <button onClick={props.clearSelectedEpic} style={{fontSize: "22px", margin: 4, backgroundColor: "rgba(0, 0, 0, 5%)", borderRadius: 8}} title="Back to epics">
+            {!hideNav && <button onClick={clearSelectedEpic} style={{fontSize: "22px", margin: 4, marginRight: 0, backgroundColor: "rgba(0, 0, 0, 5%)", borderRadius: 8}} title="Back to epics">
                 ⤺
-            </button>{" "}
-            <span style={globalStyles.pageTitle}>{props.epic.key}: {props.epic.shortName}</span>
+            </button>}
+            {" "}
+            <span style={{...globalStyles.pageTitle, marginLeft: 10, marginTop: 8, display: "inline-block"}}>{props.epic.key}: {props.epic.shortName}</span>
             {" "}
             <div style={{...globalStyles.issueCount, display: "inline-block", float: "right", position: "relative"}}>
                 {headerContent}

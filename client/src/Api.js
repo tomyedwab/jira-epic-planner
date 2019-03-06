@@ -11,6 +11,7 @@ export function useJiraData() {
     const [issues, setIssues] = useState([]);
     const [sprints, setSprints] = useState({});
     const [loading, setLoading] = useState(true);
+    const [updateTime, setUpdateTime] = useState(null);;
 
     useEffect(() => {
         if (!loading) {
@@ -51,16 +52,18 @@ export function useJiraData() {
                     })
                 );
                 setSprints(data.sprints);
+                setUpdateTime(new Date(data.updateTime));
                 setLoading(false);
             });
     }, [reloadNum]);
 
-    return [epics, issues, sprints, loading, () => setReloadNum(reloadNum + 1)];
+    return [epics, issues, sprints, updateTime, loading, () => setReloadNum(reloadNum + 1)];
 }
 
 export function usePingboardData() {
     const [reloadNum, setReloadNum] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [updateTime, setUpdateTime] = useState(null);;
     const [teamMembers, setTeamMembers] = useState({});
 
     useEffect(() => {
@@ -77,9 +80,10 @@ export function usePingboardData() {
                         end: new Date(ooo.ends_at),
                     })),
                 })));
+                setUpdateTime(new Date(data.updateTime));
                 setLoading(false);
             });
     }, [reloadNum]);
 
-    return [teamMembers, loading, () => setReloadNum(reloadNum + 1)];
+    return [teamMembers, updateTime, loading, () => setReloadNum(reloadNum + 1)];
 }

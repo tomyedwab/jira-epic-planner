@@ -36,10 +36,27 @@ function useWindowSize() {
     return [width, height];
 }
 
+function useHashFlags() {
+    const [hideNav, setHideNav] = useState(false);
+
+    function _update() {
+        const flags = window.location.hash.slice(1).split(",");
+        setHideNav(flags.indexOf("hideNav") >= 0);
+    }
+
+    useEffect(() => {
+        _update();
+        window.addEventListener('hashchange', _update);
+    });
+
+    return [hideNav];
+}
+
 const App = () => {
     const [windowWidth, windowHeight] = useWindowSize();
-    const [epics, issues, sprints, loading, forceReload] = useJiraData();
-    const [teamMembers, pingLoading, forcePingReload] = usePingboardData();
+    const [hideNav] = useHashFlags();
+    const [epics, issues, sprints, jiraUpdateTime, jiraLoading, forceReload] = useJiraData();
+    const [teamMembers, pingUpdateTime, pingLoading, forcePingReload] = usePingboardData();
     const [selectedEpic, selectEpic] = useState(null);
 
     const useSmallerFont = (windowWidth < 1000);
@@ -56,7 +73,7 @@ const App = () => {
                 selectEpic(matching[0]);
             }
         }
-    }, !loading);
+    }, !jiraLoading);
 
     const setSelectedEpic = epic => {
         selectEpic(epic);
@@ -70,9 +87,11 @@ const App = () => {
             epic={selectedEpic}
             forceReload={forceReload}
             globalStyles={globalStyles}
+            hideNav={hideNav}
             issues={filteredIssues}
-            loading={loading}
+            loading={jiraLoading}
             sprints={sprints}
+            updateTime={jiraUpdateTime}
         />
     }
     return <Epics
@@ -81,7 +100,7 @@ const App = () => {
         forceReload={forceReload}
         globalStyles={globalStyles}
         issues={issues}
-        loading={loading}
+        jiraLoading={jiraLoading}
         selectEpic={setSelectedEpic}
         sprints={sprints}
         teamMembers={teamMembers}
