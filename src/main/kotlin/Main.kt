@@ -39,7 +39,8 @@ val ProjectFilter = "(Project=CP OR Project=IC) AND (resolved is EMPTY OR resolv
 data class Secrets(
     val JiraToken: String,
     val PingboardClientId: String,
-    val PingboardSecret: String
+    val PingboardSecret: String,
+    val KeyStorePassword: String
 )
 
 // Data schema from the Jira API
@@ -393,9 +394,16 @@ fun main(args: Array<String>) {
     }
 
     // generate SSL certificate
-    val keystore = File("build/temporary.jks")
-    keystore.parentFile.mkdirs()
-    val keystoreObj = generateCertificate(keystore, keyPassword="adsfaiowerio", jksPassword="adsfaiowerio")
+    var keystore = File("./config/cacerts")
+    var keystoreObj: KeyStore? = null
+    if (keystore.exists()) {
+        keystoreObj = KeyStore.getInstance("JKS")
+        keystoreObj.load(keystore.inputStream(), secrets.KeyStorePassword.toCharArray())
+    } else {
+        keystore = File("build/temporary.jks")
+        keystore.parentFile.mkdirs()
+        keystoreObj = generateCertificate(keystore, keyAlias="jira-planner", keyPassword=secrets.KeyStorePassword, jksPassword=secrets.KeyStorePassword)
+    }
 
     val env = applicationEngineEnvironment {
         module {
@@ -442,7 +450,7 @@ fun main(args: Array<String>) {
             host = "0.0.0.0"
             port = 3001
         }
-        sslConnector(keyStore = keystoreObj, keyAlias = "mykey", keyStorePassword = { "adsfaiowerio".toCharArray() }, privateKeyPassword = { "adsfaiowerio".toCharArray() }) {
+        sslConnector(keyStore = keystoreObj!!, keyAlias = "jira-planner", keyStorePassword = { secrets.KeyStorePassword.toCharArray() }, privateKeyPassword = { secrets.KeyStorePassword.toCharArray() }) {
             port = 9091
             keyStorePath = keystore.absoluteFile
         }
