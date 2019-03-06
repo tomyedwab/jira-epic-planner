@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c7a880b3-7650-4c15-a824-c611977b2a82" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_main.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_test.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/jira-epic-planner_test.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Main.kt" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
@@ -31,29 +34,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/kotlin/Main.kt">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1274">
-              <caret line="451" column="8" selection-start-line="451" selection-start-column="8" selection-end-line="451" selection-end-column="8" />
+            <state relative-caret-position="112">
+              <caret line="387" column="4" selection-start-line="387" selection-start-column="4" selection-end-line="387" selection-end-column="4" />
               <folding>
                 <element signature="e#21#911#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/secrets.json">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="60">
-              <caret line="4" column="3" selection-start-line="4" selection-start-column="3" selection-end-line="4" selection-end-column="3" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Makefile">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="105">
-              <caret line="7" column="40" selection-start-line="7" selection-start-column="40" selection-end-line="7" selection-end-column="40" />
             </state>
           </provider>
         </entry>
@@ -96,6 +81,7 @@
         <option value="$PROJECT_DIR$/static/index.html" />
         <option value="$PROJECT_DIR$/settings.gradle.kts" />
         <option value="$PROJECT_DIR$/config/secrets.json.example" />
+        <option value="$PROJECT_DIR$/config/secrets.json" />
         <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/static/js/main.js" />
         <option value="$PROJECT_DIR$/client/src/index.js" />
@@ -104,16 +90,15 @@
         <option value="$PROJECT_DIR$/client/package.json" />
         <option value="$PROJECT_DIR$/resources/application.conf" />
         <option value="$PROJECT_DIR$/build.gradle.kts" />
-        <option value="$PROJECT_DIR$/config/secrets.json" />
         <option value="$PROJECT_DIR$/src/main/kotlin/Main.kt" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-1920" />
-    <option name="y" value="149" />
-    <option name="width" value="1440" />
-    <option name="height" value="877" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-2560" />
+    <option name="y" value="23" />
+    <option name="width" value="2560" />
+    <option name="height" value="1417" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="1" id="Add" />
@@ -131,11 +116,6 @@
             <path>
               <item name="jira-epic-planner" type="b2602c69:ProjectViewProjectNode" />
               <item name="jira-epic-planner" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
-            </path>
-            <path>
-              <item name="jira-epic-planner" type="b2602c69:ProjectViewProjectNode" />
-              <item name="jira-epic-planner" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
-              <item name="config" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -202,10 +182,10 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1920" y="-31" width="1920" height="1057" extended-state="6" />
+    <frame x="-2560" y="23" width="2560" height="1417" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.15761448" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.117553614" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Designer" order="2" />
       <window_info id="Favorites" order="3" side_tool="true" />
@@ -217,7 +197,7 @@
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Terminal" order="7" />
-      <window_info anchor="bottom" id="Event Log" order="8" sideWeight="0.5007153" side_tool="true" visible="true" weight="0.13367875" />
+      <window_info anchor="bottom" id="Event Log" order="8" sideWeight="0.5007153" side_tool="true" visible="true" weight="0.09735849" />
       <window_info anchor="bottom" id="Version Control" order="9" />
       <window_info anchor="bottom" id="Messages" order="10" sideWeight="0.49928468" visible="true" weight="0.32948717" />
       <window_info anchor="bottom" id="Build" order="11" sideWeight="0.49928468" weight="0.32948717" />
@@ -269,6 +249,7 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/config/secrets.json" />
     <entry file="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-runtime/0.9.0/b967e9054e93f29f3613177bfa6930f6709d9e3d/kotlinx-serialization-runtime-0.9.0-sources.jar!/kotlinx/serialization/Coders.kt" />
     <entry file="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http/1.0.1/5b26e7f8a574ac7a1e9acaba709cb076f2ba8a3c/ktor-http-1.0.1-sources.jar!/io/ktor/http/Parameters.kt" />
     <entry file="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-server-core/1.0.1/c8c2cca849d3b79bfb9b984d69b609d0b7328218/ktor-server-core-1.0.1-sources.jar!/io/ktor/request/ApplicationRequest.kt" />
@@ -321,6 +302,13 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="300">
           <caret line="20" column="21" selection-start-line="20" selection-start-column="21" selection-end-line="20" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Makefile">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="4" column="35" selection-start-line="4" selection-start-column="35" selection-end-line="4" selection-end-column="35" />
         </state>
       </provider>
     </entry>
@@ -380,13 +368,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Makefile">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="105">
-          <caret line="7" column="40" selection-start-line="7" selection-start-column="40" selection-end-line="7" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-network-tls/1.1.2/3b6d348c4fac8cab5a9696b9bc37825ba1050bd4/ktor-network-tls-1.1.2-sources.jar!/jvmMain/io/ktor/network/tls/certificates/Certificates.kt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="285">
@@ -394,17 +375,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config/secrets.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="4" column="3" selection-start-line="4" selection-start-column="3" selection-end-line="4" selection-end-column="3" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/kotlin/Main.kt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1274">
-          <caret line="451" column="8" selection-start-line="451" selection-start-column="8" selection-end-line="451" selection-end-column="8" />
+        <state relative-caret-position="112">
+          <caret line="387" column="4" selection-start-line="387" selection-start-column="4" selection-end-line="387" selection-end-column="4" />
           <folding>
             <element signature="e#21#911#0" expanded="true" />
           </folding>
