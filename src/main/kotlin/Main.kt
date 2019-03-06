@@ -10,6 +10,7 @@ import io.ktor.features.CallLogging
 import io.ktor.http.ContentType.Application.Json as ContentTypeJson
 import io.ktor.http.ContentType.Application.FormUrlEncoded as ContentTypeFormUrlEncoded
 import io.ktor.http.content.*
+import io.ktor.network.tls.certificates.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
@@ -23,6 +24,7 @@ import java.util.logging.ConsoleHandler
 import java.util.logging.Logger
 import org.slf4j.event.Level
 import java.io.File
+import java.security.KeyStore
 import java.util.*
 import java.util.logging.Level.ALL
 
@@ -390,44 +392,61 @@ fun main(args: Array<String>) {
         updateDataCache(client, secrets)
     }
 
-    val server = embeddedServer(Netty, port = 3001) {
-        install(CallLogging) {
-            level = Level.INFO
+    // generate SSL certificate
+    val keystore = File("build/temporary.jks")
+    keystore.parentFile.mkdirs()
+    val keystoreObj = generateCertificate(keystore, keyPassword="adsfaiowerio", jksPassword="adsfaiowerio")
+
+    val env = applicationEngineEnvironment {
+        module {
+            install(CallLogging) {
+                level = Level.INFO
+            }
+
+            routing {
+                static {
+                    staticRootFolder = File("client/build")
+                    default("index.html")
+                    file("*", "index.html")
+
+                    static("static") {
+                        static("js") {
+                            files("static/js")
+                        }
+                    }
+                }
+
+                get("/api/jira") {
+                    val force: String = call.request.queryParameters["force"] ?: "false"
+                    if (force == "true") {
+                        dataCache = runBlocking {
+                            updateDataCache(client, secrets)
+                        }
+                    }
+                    call.respondText(JSON.stringify(DataCache.serializer(), dataCache), ContentTypeJson)
+                }
+
+                get("/api/pingboard") {
+                    val force: String = call.request.queryParameters["force"] ?: "false"
+                    if (force == "true") {
+                        teamCache = runBlocking {
+                            updatePingboardData(client, secrets)
+                        }
+                    }
+                    call.respondText(JSON.stringify(TeamCache.serializer(), teamCache), ContentTypeJson)
+                }
+            }
         }
-
-        routing {
-            static {
-                staticRootFolder = File("client/build")
-                default("index.html")
-                file("*", "index.html")
-
-                static("static") {
-                    static("js") {
-                        files("static/js")
-                    }
-                }
-            }
-
-            get("/api/jira") {
-                val force: String = call.request.queryParameters["force"] ?: "false"
-                if (force == "true") {
-                    dataCache = runBlocking {
-                        updateDataCache(client, secrets)
-                    }
-                }
-                call.respondText(JSON.stringify(DataCache.serializer(), dataCache), ContentTypeJson)
-            }
-
-            get("/api/pingboard") {
-                val force: String = call.request.queryParameters["force"] ?: "false"
-                if (force == "true") {
-                    teamCache = runBlocking {
-                        updatePingboardData(client, secrets)
-                    }
-                }
-                call.respondText(JSON.stringify(TeamCache.serializer(), teamCache), ContentTypeJson)
-            }
+        // Public API
+        connector {
+            host = "0.0.0.0"
+            port = 3001
+        }
+        sslConnector(keyStore = keystoreObj, keyAlias = "mykey", keyStorePassword = { "adsfaiowerio".toCharArray() }, privateKeyPassword = { "adsfaiowerio".toCharArray() }) {
+            port = 9091
+            keyStorePath = keystore.absoluteFile
         }
     }
-    server.start(wait = true)
+
+    embeddedServer(Netty, env).start(wait = true)
 }
