@@ -38,6 +38,5 @@ dependencies {
     compile("io.ktor:ktor-auth:$ktorVersion")
     compile("io.ktor:ktor-html-builder:$ktorVersion")
     compile("io.ktor:ktor-client-apache:$ktorVersion")
-    compile("io.ktor:ktor-network-tls:$ktorVersion")
     compile("org.slf4j:slf4j-simple:1.6.1")
 }
