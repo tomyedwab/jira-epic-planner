@@ -5,7 +5,7 @@ import {TEAM_MEMBER_DATA} from './static.js';
 window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
 
-export function useJiraData() {
+export function useJiraData(projectKey) {
     const [reloadNum, setReloadNum] = useState(0);
     const [epics, setEpics] = useState([]);
     const [issues, setIssues] = useState([]);
@@ -14,11 +14,14 @@ export function useJiraData() {
     const [updateTime, setUpdateTime] = useState(null);;
 
     useEffect(() => {
+        if (!projectKey) {
+            return;
+        }
         if (!loading) {
             setLoading(true);
         }
         const force = reloadNum > 0;
-        fetch(`/api/jira?force=${force}`)
+        fetch(`/api/${projectKey}/jira?force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 data.epics.forEach(epic => window.ALL_EPICS[epic.key] = epic);
@@ -55,20 +58,23 @@ export function useJiraData() {
                 setUpdateTime(new Date(data.updateTime));
                 setLoading(false);
             });
-    }, [reloadNum]);
+    }, [projectKey, reloadNum]);
 
     return [epics, issues, sprints, updateTime, loading, () => setReloadNum(reloadNum + 1)];
 }
 
-export function usePingboardData() {
+export function usePingboardData(projectKey) {
     const [reloadNum, setReloadNum] = useState(0);
     const [loading, setLoading] = useState(true);
     const [updateTime, setUpdateTime] = useState(null);;
     const [teamMembers, setTeamMembers] = useState({});
 
     useEffect(() => {
+        if (!projectKey) {
+            return;
+        }
         const force = reloadNum > 0;
-        fetch(`/api/pingboard?force=${force}`)
+        fetch(`/api/${projectKey}/pingboard?force=${force}`)
             .then(resp => resp.json())
             .then(data => {
                 setTeamMembers(data.members.map(member => ({
@@ -83,7 +89,7 @@ export function usePingboardData() {
                 setUpdateTime(new Date(data.updateTime));
                 setLoading(false);
             });
-    }, [reloadNum]);
+    }, [projectKey, reloadNum]);
 
     return [teamMembers, updateTime, loading, () => setReloadNum(reloadNum + 1)];
 }

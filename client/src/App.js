@@ -55,17 +55,25 @@ function useHashFlags() {
 const App = () => {
     const [windowWidth, windowHeight] = useWindowSize();
     const [hideNav] = useHashFlags();
-    const [epics, issues, sprints, jiraUpdateTime, jiraLoading, forceReload] = useJiraData();
-    const [teamMembers, pingUpdateTime, pingLoading, forcePingReload] = usePingboardData();
     const [selectedEpic, selectEpic] = useState(null);
+    const [selectedProject, selectProject] = useState(null);
 
     const useSmallerFont = (windowWidth < 1000);
     const globalStyles = GlobalStyles(useSmallerFont);
 
     const setLocation = useLocation(path => {
-        const epicKey = path.substr(1);
-        console.log("Selected epic", epicKey);
-        if (epicKey === "") {
+        const parts = path.substr(1).split("/");
+        let epicKey = null;
+        let projectKey = null;
+        if (parts.length > 1) {
+            projectKey = parts[0];
+            epicKey = parts[1];
+            console.log("Selected epic", projectKey, epicKey);
+        } else if (parts.length > 0) {
+            projectKey = parts[0];
+            console.log("Selected project", projectKey);
+        }
+        if (epicKey === null) {
             selectEpic(null);
         } else {
             const matching = epics.filter(epic => epic.key === epicKey);
@@ -73,12 +81,27 @@ const App = () => {
                 selectEpic(matching[0]);
             }
         }
+        if (projectKey === null) {
+            selectProject(null);
+        } else {
+            selectProject(projectKey);
+        }
     }, !jiraLoading);
+
+    const setSelectedProject = projectKey => {
+        selectProject(projectKey);
+        selectEpic(null);
+        setLocation("/" + projectKey);
+    };
 
     const setSelectedEpic = epic => {
         selectEpic(epic);
-        setLocation("/" + (epic ? epic.key : ""));
+        setLocation("/" + selectedProject + "/" + (epic ? epic.key : ""));
     };
+
+    console.log("Render project", selectedProject);
+    const [epics, issues, sprints, jiraUpdateTime, jiraLoading, forceReload] = useJiraData(selectedProject);
+    const [teamMembers, pingUpdateTime, pingLoading, forcePingReload] = usePingboardData(selectedProject);
     
     if (selectedEpic) {
         const filteredIssues = issues.filter(issue => issue.epic === selectedEpic.key);

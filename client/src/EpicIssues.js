@@ -16,6 +16,7 @@ const SEND = 7;
 
 const ISSUE_PRIORITIES = {
     "Done": 0,
+    "QA Verify": 5000000,
     "Awaiting Deploy": 4000000,
     "In Review": 3000000,
     "In Progress": 2000000,

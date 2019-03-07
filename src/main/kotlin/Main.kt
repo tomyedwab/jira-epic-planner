@@ -27,17 +27,23 @@ import java.util.*
 import java.util.logging.Level.ALL
 
 // TODO: Auto-clear cache after some timeout
-// TODO: Don't load epics twice?
 
 // Constants for our particular project
-val PingboardGroup = 260712
-val ProjectFilter = "(Project=CP OR Project=IC) AND (resolved is EMPTY OR resolved >= -180d) AND (labels IS EMPTY OR labels != \\\"from-asana\\\")"
+//val PingboardGroup = 260712
+//val ProjectFilter = "(Project=CP OR Project=IC) AND (resolved is EMPTY OR resolved >= -180d) AND (labels IS EMPTY OR labels != \\\"from-asana\\\")"
+
+@Serializable
+data class ProjectConfig(
+    @Optional val PingboardGroup: Int? = null,
+    val ProjectFilter: String
+)
 
 @Serializable
 data class Secrets(
     val JiraToken: String,
     val PingboardClientId: String,
-    val PingboardSecret: String
+    val PingboardSecret: String,
+    val ProjectConfigs: Map<String, ProjectConfig>
 )
 
 // Data schema from the Jira API
@@ -148,7 +154,7 @@ data class Sprint(
 )
 
 @Serializable
-data class DataCache(
+data class JiraCache(
         val updateTime: Long,
         val epics: List<Epic>,
         val issues: List<Issue>,
@@ -250,12 +256,17 @@ fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): L
         if (!sprints.containsKey(sprintId)) {
             val sprintOrigName = params.get("name") ?: ""
 
+            // CP 2019
             val re1 = Regex("^\\[CP\\] Sprint (\\d+-\\d+).*$").matchEntire(sprintOrigName)
-            val re2 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            // TP 2019
+            val re2 = Regex("^TP.+ (\\d+) Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            // CP 2018
+            val re3 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
             var sprintName = when {
                 re1 != null && re1.groupValues.size > 1 -> re1.groupValues[1]
-                re2 != null && re2.groupValues.size > 1 && re2.groupValues[1].length == 2 -> "2018-${re2.groupValues[1]}"
-                re2 != null && re2.groupValues.size > 1 && re2.groupValues[1].length == 1 -> "2018-0${re2.groupValues[1]}"
+                re2 != null && re2.groupValues.size > 2 -> "${re2.groupValues[1]}-${re2.groupValues[2]}"
+                re3 != null && re3.groupValues.size > 1 && re3.groupValues[1].length == 2 -> "2018-${re3.groupValues[1]}"
+                re3 != null && re3.groupValues.size > 1 && re3.groupValues[1].length == 1 -> "2018-0${re3.groupValues[1]}"
                 else -> {
                     println("Invalid sprint name $sprintOrigName")
                     return@mapNotNull null
@@ -275,7 +286,7 @@ fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): L
     } ?: emptyList()
 }
 
-suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpClient, secrets: Secrets, serializer: DeserializationStrategy<V>, query: String): List<T> {
+suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpClient, secrets: Secrets, serializer: DeserializationStrategy<V>, projectKey: String, query: String): List<T> {
     var startAt = 0
     val results = ArrayList<T>()
     while (true) {
@@ -286,7 +297,7 @@ suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpC
         }
         val result = JSON.nonstrict.parse(serializer, responseText)
         val cnt = result.issues.size
-        println("Got $cnt issues")
+        println("$projectKey: Got $cnt issues")
         if (result.issues.isEmpty()) {
             break
         }
@@ -296,11 +307,11 @@ suspend fun<T, V: APIResults<T>> issueSearchRequest(client: io.ktor.client.HttpC
     return results.toList()
 }
 
-suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets): DataCache {
+suspend fun updateJiraCache(client: io.ktor.client.HttpClient, secrets: Secrets, projectKey: String, ProjectFilter: String): JiraCache {
     val sprints = HashMap<String, Sprint>()
 
-    println("Loading issues...")
-    val issueResults = issueSearchRequest<IssueResult, IssueResults>(client, secrets, IssueResults.serializer(),
+    println("$projectKey: Loading issues...")
+    val issueResults = issueSearchRequest<IssueResult, IssueResults>(client, secrets, IssueResults.serializer(), projectKey,
             ProjectFilter)
 
     val epics = issueResults
@@ -320,22 +331,29 @@ suspend fun updateDataCache(client: io.ktor.client.HttpClient, secrets: Secrets)
                 } } ?: emptyList()
     ) }
 
-    println("Loaded data from Jira API.")
+    println("$projectKey: Loaded data from Jira API.")
 
-    return DataCache(Date().time, epics, issues, sprints)
+    return JiraCache(Date().time, epics, issues, sprints)
 }
 
-suspend fun updatePingboardData(client: io.ktor.client.HttpClient, secrets: Secrets): TeamCache {
+suspend fun getPingboardToken(client: io.ktor.client.HttpClient, secrets: Secrets): String {
     println("Getting Pingboard access token...")
     val responseText = client.post<String>("https://app.pingboard.com/oauth/token?grant_type=client_credentials") {
         body = TextContent("client_id=${secrets.PingboardClientId}&client_secret=${secrets.PingboardSecret}", ContentTypeFormUrlEncoded)
     }
     val tokenResult = JSON.nonstrict.parse(TokenResult.serializer(), responseText)
+    return tokenResult.access_token
+}
+
+suspend fun updatePingboardData(client: io.ktor.client.HttpClient, accessToken: String, projectKey: String, PingboardGroup: Int?): TeamCache {
+    if (PingboardGroup == null) {
+        return TeamCache(Date().time, emptyList())
+    }
 
     // Get the group data
-    println("Getting user information...")
-    val groupResponseText = client.get<String>("https://app.pingboard.com/api/v2/groups/${PingboardGroup}?include=users") {
-        header("Authorization", "Bearer ${tokenResult.access_token}")
+    println("$projectKey: Getting user information...")
+    val groupResponseText = client.get<String>("https://app.pingboard.com/api/v2/groups/$PingboardGroup?include=users") {
+        header("Authorization", "Bearer $accessToken")
     }
 
     val groupResult = JSON.nonstrict.parse(GroupResult.serializer(), groupResponseText)
@@ -344,8 +362,8 @@ suspend fun updatePingboardData(client: io.ktor.client.HttpClient, secrets: Secr
     groupResult.linked.users.forEach {
         println("Loading statuses for ${it.first_name} ${it.last_name}")
         val include = if (oooTypeId == null) "status_type" else ""
-        val statusResponseText = client.get<String>("https://app.pingboard.com/api/v2/statuses?include=${include}&user_id=${it.id}&page_size=999") {
-            header("Authorization", "Bearer ${tokenResult.access_token}")
+        val statusResponseText = client.get<String>("https://app.pingboard.com/api/v2/statuses?include=$include&user_id=${it.id}&page_size=999") {
+            header("Authorization", "Bearer ${accessToken}")
         }
         val statusResponse = JSON.nonstrict.parse(StatusResult.serializer(), statusResponseText)
         if (oooTypeId == null && statusResponse.linked != null) {
@@ -357,12 +375,12 @@ suspend fun updatePingboardData(client: io.ktor.client.HttpClient, secrets: Secr
             }
         }
         if (oooTypeId == null) {
-            println("Error: flex-time-off status type not found!")
+            println("$projectKey: Error: flex-time-off status type not found!")
         }
         it.ooos = statusResponse.statuses.filter { it.status_type_id.toString() == oooTypeId }
     }
 
-    println("Loaded data from Pingboard API.")
+    println("$projectKey: Loaded data from Pingboard API.")
 
     return TeamCache(Date().time, groupResult.linked.users)
 }
@@ -382,12 +400,27 @@ fun main(args: Array<String>) {
     // HTTP client to use to talk to Jira API
     val client = io.ktor.client.HttpClient(Apache)
 
-    var teamCache: TeamCache = runBlocking {
-        updatePingboardData(client, secrets)
+    val pingboardToken = runBlocking {
+        getPingboardToken(client, secrets)
     }
 
-    var dataCache: DataCache = runBlocking {
-        updateDataCache(client, secrets)
+    val teamCaches = HashMap<String, TeamCache>()
+    val jiraCaches = HashMap<String, JiraCache>()
+
+    val teamJobs = secrets.ProjectConfigs.keys.map { projectKey -> GlobalScope.launch {
+        val PingboardGroup = secrets.ProjectConfigs.getValue(projectKey).PingboardGroup
+        teamCaches[projectKey] = updatePingboardData(client, pingboardToken, projectKey, PingboardGroup)
+    } }
+
+    val jiraJobs = secrets.ProjectConfigs.keys.map { projectKey -> GlobalScope.launch {
+        val ProjectFilter = secrets.ProjectConfigs.getValue(projectKey).ProjectFilter
+        jiraCaches[projectKey] = updateJiraCache(client, secrets, projectKey, ProjectFilter)
+    } }
+
+    // Wait for all the dust to settle
+    runBlocking {
+        teamJobs.forEach { it.join() }
+        jiraJobs.forEach { it.join() }
     }
 
     val server = embeddedServer(Netty, port = 3001) {
@@ -408,24 +441,36 @@ fun main(args: Array<String>) {
                 }
             }
 
-            get("/api/jira") {
+            get("/api/{project}/jira") {
+                val projectKey = call.parameters["project"]
+                val config = secrets.ProjectConfigs.get(projectKey)
+                if (projectKey == null || config == null) {
+                    throw Error("Project $projectKey not configured.")
+                }
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 if (force == "true") {
-                    dataCache = runBlocking {
-                        updateDataCache(client, secrets)
+                    jiraCaches[projectKey] = runBlocking {
+                        updateJiraCache(client, secrets, projectKey, config.ProjectFilter)
                     }
                 }
-                call.respondText(JSON.stringify(DataCache.serializer(), dataCache), ContentTypeJson)
+                val cache = jiraCaches.get(projectKey) ?: throw Error("Project $projectKey data missing.")
+                call.respondText(JSON.stringify(JiraCache.serializer(), cache), ContentTypeJson)
             }
 
-            get("/api/pingboard") {
+            get("/api/{project}/pingboard") {
+                val projectKey = call.parameters["project"]
+                val config = secrets.ProjectConfigs.get(projectKey)
+                if (projectKey == null || config == null) {
+                    throw Error("Project $projectKey not configured.")
+                }
                 val force: String = call.request.queryParameters["force"] ?: "false"
                 if (force == "true") {
-                    teamCache = runBlocking {
-                        updatePingboardData(client, secrets)
+                    teamCaches[projectKey] = runBlocking {
+                        updatePingboardData(client, pingboardToken, projectKey, config.PingboardGroup)
                     }
                 }
-                call.respondText(JSON.stringify(TeamCache.serializer(), teamCache), ContentTypeJson)
+                val cache = teamCaches.get(projectKey) ?: throw Error("Project $projectKey data missing.")
+                call.respondText(JSON.stringify(TeamCache.serializer(), cache), ContentTypeJson)
             }
         }
     }
