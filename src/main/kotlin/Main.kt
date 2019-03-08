@@ -34,6 +34,7 @@ import java.util.logging.Level.ALL
 
 @Serializable
 data class ProjectConfig(
+    val ProjectName: String,
     @Optional val PingboardGroup: Int? = null,
     val ProjectFilter: String
 )
@@ -226,6 +227,15 @@ fun getIssueSubteam(issue: IssueResult): String? = when {
     else -> null
 }
 
+fun sprintName(year: String, sprintId: String): String? = when {
+    sprintId.length == 2 -> "$year-$sprintId"
+    sprintId.length == 1 -> "$year-0$sprintId"
+    else -> {
+        println("Invalid sprint name $year-$sprintId")
+        null
+    }
+}
+
 fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): List<Int> {
     return issue.fields.customfield_10103?.mapNotNull {
         // Extract parameters between parentheses
@@ -260,18 +270,20 @@ fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): L
             val re1 = Regex("^\\[CP\\] Sprint (\\d+-\\d+).*$").matchEntire(sprintOrigName)
             // TP 2019
             val re2 = Regex("^TP.+ (\\d+) Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            // CLASS 2019
+            val re3 = Regex("^CLASS (\\d+) .+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
             // CP 2018
-            val re3 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            val re4 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
             var sprintName = when {
                 re1 != null && re1.groupValues.size > 1 -> re1.groupValues[1]
-                re2 != null && re2.groupValues.size > 2 -> "${re2.groupValues[1]}-${re2.groupValues[2]}"
-                re3 != null && re3.groupValues.size > 1 && re3.groupValues[1].length == 2 -> "2018-${re3.groupValues[1]}"
-                re3 != null && re3.groupValues.size > 1 && re3.groupValues[1].length == 1 -> "2018-0${re3.groupValues[1]}"
+                re2 != null && re2.groupValues.size > 2 -> sprintName(re2.groupValues[1], re2.groupValues[2])
+                re3 != null && re3.groupValues.size > 2 -> sprintName(re3.groupValues[1], re3.groupValues[2])
+                re4 != null && re4.groupValues.size > 1 -> sprintName("2018", re4.groupValues[1])
                 else -> {
                     println("Invalid sprint name $sprintOrigName")
                     return@mapNotNull null
                 }
-            }
+            } ?: return@mapNotNull null
 
             val sprint = Sprint(
                     id=sprintIdInt,
@@ -439,6 +451,15 @@ fun main(args: Array<String>) {
                         files("static/js")
                     }
                 }
+            }
+
+            get("/api/{project}/meta") {
+                val projectKey = call.parameters["project"]
+                val config = secrets.ProjectConfigs.get(projectKey)
+                if (projectKey == null || config == null) {
+                    throw Error("Project $projectKey not configured.")
+                }
+                call.respondText(JSON.stringify(ProjectConfig.serializer(), config), ContentTypeJson)
             }
 
             get("/api/{project}/jira") {

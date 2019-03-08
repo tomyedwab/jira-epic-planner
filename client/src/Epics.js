@@ -311,7 +311,7 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
 };
 
 export default function Epics(props) {
-    const {epics, issues, sprints, jiraLoading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
+    const {projectName, epics, issues, sprints, jiraLoading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
 
     const orderedSprints = (
         Object.values(sprints)
@@ -324,6 +324,8 @@ export default function Epics(props) {
     epics.forEach(epic => epicMap[epic.key] = epic);
 
     return <div>
+        <div style={{...globalStyles.pageTitle, marginLeft: 10, marginTop: 8}}>Project {projectName}</div>
+
         {filteredSprints.map(sprint => (
             renderSprint(
                 sprint, epicMap,

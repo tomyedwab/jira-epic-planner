@@ -5,13 +5,30 @@ import {TEAM_MEMBER_DATA} from './static.js';
 window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
 
+export function useMetaData(projectKey) {
+    const [projectName, setProjectName] = useState("Loading...");
+
+    useEffect(() => {
+        if (!projectKey) {
+            return;
+        }
+        fetch(`/api/${projectKey}/meta`)
+            .then(resp => resp.json())
+            .then(data => {
+                setProjectName(data.ProjectName);
+            });
+    }, [projectKey]);
+
+    return [projectName];
+}
+
 export function useJiraData(projectKey) {
     const [reloadNum, setReloadNum] = useState(0);
     const [epics, setEpics] = useState([]);
     const [issues, setIssues] = useState([]);
     const [sprints, setSprints] = useState({});
     const [loading, setLoading] = useState(true);
-    const [updateTime, setUpdateTime] = useState(null);;
+    const [updateTime, setUpdateTime] = useState(null);
 
     useEffect(() => {
         if (!projectKey) {

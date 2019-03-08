@@ -15,13 +15,15 @@ const ISSUE_ICONS = {
 const SEND = 7;
 
 const ISSUE_PRIORITIES = {
-    "Done": 0,
-    "QA Verify": 5000000,
-    "Awaiting Deploy": 4000000,
-    "In Review": 3000000,
-    "In Progress": 2000000,
-    "Dev": 2000000,
-    "To Do": 1000000,
+    "QA Verify": 9000000,
+    "Awaiting Deploy": 8000000,
+    "In Review": 7000000,
+    "In Progress": 6000000,
+    "Dev": 5000000,
+    "To Do": 4000000,
+    "Design": 3000000,
+    "Blocked": 2000000,
+    "Triage": 1000000,
 };
 
 const SUBTEAM_PRIORITIES = {
@@ -31,6 +33,14 @@ const SUBTEAM_PRIORITIES = {
     "Backend": 0.02,
 };
 
+const isDone = status => {
+    return (
+        status === "Done" ||
+        status === "Closed" ||
+        status === "Won't Fix"
+    );
+}
+
 const SHOW_ISSUE_PRIORITIES = false;
 
 const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
@@ -39,11 +49,11 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     let sprints = [];
 
     // Primary sort: "Done" at the top, then current sprint, then rest
-    if (issue.status === "Done") {
-        priority = 10000000;
+    if (isDone(issue.status)) {
+        priority = 20000000;
         sprints = sprintNames;
     } else if (sprintNames.indexOf(activeSprintName) >= 0) {
-        priority = 5000000;
+        priority = 10000000;
         // sprints not relevant
     } else {
         // Sort based on first upcoming sprint, unless there are none
@@ -54,14 +64,13 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
     }
 
     // Secondary sort: statuses in logical order
-    priority += ISSUE_PRIORITIES[issue.status];
+    if (ISSUE_PRIORITIES[issue.status]) {
+        priority += ISSUE_PRIORITIES[issue.status];
+    }
 
     // Tertiary sort: chronological by sprint
     if (sprints.length > 0) {
         priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
-    } else if (issue.status === "Done") {
-        // Assume this was done infinitely far in the past
-        priority += 999999;
     }
 
     // Quaternary (?) sort: Whether the issue has been assigned
@@ -78,7 +87,7 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
 }
 
 const renderIssue = ([isNested, isLast, issue, priority], row, sortedSprints, hoverItem, setHover, globalStyles) => {
-    const style = globalStyles.issueStyle(isNested, isLast, issue.status);
+    const style = globalStyles.issueStyle(isNested, isLast, isDone(issue.status));
 
     const hovering = hoverItem === issue.key;
     const backgroundColor = hovering ? "rgba(0, 0, 0, 15%)" : (!!(row % 2) ? "rgba(0, 0, 0, 0)" : "rgba(0, 0, 0, 5%)"); 
@@ -127,7 +136,7 @@ const renderIssue = ([isNested, isLast, issue, priority], row, sortedSprints, ho
     let issueColor = "#ccc";
     let issueIcon = null;
 
-    if (issue.status === "Done") {
+    if (isDone(issue.status)) {
         issueColor = "#00a60e";
         issueIcon = <svg viewBox="-6 -6 60 60" style={globalStyles.issueIconContainer}>
             <polygon fill="#ffffff" points="40.6,12.1 17,35.7 7.4,26.1 4.6,31 17,43.3 43.4,16.9"/>
@@ -175,7 +184,7 @@ export default function EpicIssues(props) {
 
     // Apply issue filters
     const filteredIssues = issues.filter(issue => (
-        (showDone || issue.status !== "Done") &&
+        (showDone || !isDone(issue.status)) &&
         (showDesign || issue.subteam !== "Design") &&
         (showFrontend || (issue.subteam !== "Frontend" && issue.subteam !== "Front/Backend")) &&
         (showBackend || (issue.subteam !== "Backend" && issue.subteam !== "Front/Backend"))
@@ -244,7 +253,7 @@ export default function EpicIssues(props) {
         // Sort the subtasks as well
         const subtasks = issue.subtasks.slice().sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
         subtasks.forEach((subissue, subidx) => {
-            if (showDone || subissue.status !== "Done") {
+            if (showDone || !isDone(subissue.status)) {
                 flattenedIssues.push([true, subidx === issue.subtasks.length - 1, subissue, issuePriorities[subissue.key]]);
             }
         });
@@ -297,7 +306,7 @@ export default function EpicIssues(props) {
                 ⤺
             </button>}
             {" "}
-            <span style={{...globalStyles.pageTitle, marginLeft: 10, marginTop: 8, display: "inline-block"}}>{props.epic.key}: {props.epic.shortName}</span>
+            <span style={{...globalStyles.pageTitle, marginLeft: 10, marginTop: 8, display: "inline-block"}}>Epic {props.epic.key}: {props.epic.shortName}</span>
             {" "}
             <div style={{...globalStyles.issueCount, display: "inline-block", float: "right", position: "relative"}}>
                 {headerContent}

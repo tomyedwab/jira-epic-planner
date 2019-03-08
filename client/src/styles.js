@@ -45,8 +45,8 @@ const GlobalStyles = (useSmallerFont) => ({
     issueColumns: (numSprints) => ({
         display: "grid", 
         gridTemplateColumns: useSmallerFont ? 
-            `20px auto 60px 80px 80px 20px repeat(${numSprints}, 34px)` :
-            `20px auto 75px 90px 140px 30px repeat(${numSprints}, 50px)`,
+            `20px auto 70px 80px 80px 20px repeat(${numSprints}, 34px)` :
+            `20px auto 85px 90px 140px 30px repeat(${numSprints}, 50px)`,
     }),
 
     issueRows: (numRows) => ({
@@ -73,10 +73,10 @@ const GlobalStyles = (useSmallerFont) => ({
         width: useSmallerFont ? 18 : 24,
     },
 
-    issueStyle: (isNested, isLast, status) => ({
+    issueStyle: (isNested, isLast, isDone) => ({
         paddingTop: (isNested ? 2 : 4) * (useSmallerFont ? 1 : 2),
         paddingBottom: (isLast ? 4 : 2) * (useSmallerFont ? 1 : 2),
-        color: (status === "Done") ? "#aaa": "#000",
+        color: isDone ? "#aaa": "#000",
         fontSize: useSmallerFont ? "12px" : "14px",
     }),
 

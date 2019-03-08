@@ -1,20 +1,18 @@
 import React, {useState, useEffect} from 'react';
 
-import {useJiraData, usePingboardData} from './Api.js';
+import {useMetaData, useJiraData, usePingboardData} from './Api.js';
 import Epics from './Epics.js';
 import EpicIssues from './EpicIssues.js';
 import GlobalStyles from './styles.js';
 
 // Very simple path-based router
-function useLocation(cb, ready) {
+function useLocation(cb) {
     useEffect(() => {
         window.addEventListener('popstate', () => cb(window.location.pathname));
     });
     useEffect(() => {
-        if (ready) {
-            cb(window.location.pathname);
-        }
-    }, [ready]);
+        cb(window.location.pathname);
+    });
 
 
     return path => {
@@ -61,32 +59,9 @@ const App = () => {
     const useSmallerFont = (windowWidth < 1000);
     const globalStyles = GlobalStyles(useSmallerFont);
 
-    const setLocation = useLocation(path => {
-        const parts = path.substr(1).split("/");
-        let epicKey = null;
-        let projectKey = null;
-        if (parts.length > 1) {
-            projectKey = parts[0];
-            epicKey = parts[1];
-            console.log("Selected epic", projectKey, epicKey);
-        } else if (parts.length > 0) {
-            projectKey = parts[0];
-            console.log("Selected project", projectKey);
-        }
-        if (epicKey === null) {
-            selectEpic(null);
-        } else {
-            const matching = epics.filter(epic => epic.key === epicKey);
-            if (matching.length === 1) {
-                selectEpic(matching[0]);
-            }
-        }
-        if (projectKey === null) {
-            selectProject(null);
-        } else {
-            selectProject(projectKey);
-        }
-    }, !jiraLoading);
+    // Lazy definition of the callback function so we can check whether the project has loaded
+    let updateLocation = null;
+    const setLocation = useLocation(path => updateLocation(path));
 
     const setSelectedProject = projectKey => {
         selectProject(projectKey);
@@ -100,8 +75,39 @@ const App = () => {
     };
 
     console.log("Render project", selectedProject);
+    const [projectName] = useMetaData(selectedProject);
     const [epics, issues, sprints, jiraUpdateTime, jiraLoading, forceReload] = useJiraData(selectedProject);
     const [teamMembers, pingUpdateTime, pingLoading, forcePingReload] = usePingboardData(selectedProject);
+
+    updateLocation = path => {
+        const parts = path.substr(1).split("/");
+        let epicKey = null;
+        let projectKey = null;
+        if (parts.length > 1) {
+            projectKey = parts[0];
+            epicKey = parts[1];
+            console.log("Selected epic", projectKey, epicKey);
+        } else if (parts.length > 0) {
+            projectKey = parts[0];
+            console.log("Selected project", projectKey);
+        }
+
+        if (projectKey === null) {
+            selectProject(null);
+        } else {
+            selectProject(projectKey);
+        }
+        if (!jiraLoading) {
+            if (epicKey === null) {
+                selectEpic(null);
+            } else {
+                const matching = epics.filter(epic => epic.key === epicKey);
+                if (matching.length === 1) {
+                    selectEpic(matching[0]);
+                }
+            }
+        }
+    };
     
     if (selectedEpic) {
         const filteredIssues = issues.filter(issue => issue.epic === selectedEpic.key);
@@ -124,6 +130,7 @@ const App = () => {
         globalStyles={globalStyles}
         issues={issues}
         jiraLoading={jiraLoading}
+        projectName={projectName}
         selectEpic={setSelectedEpic}
         sprints={sprints}
         teamMembers={teamMembers}
