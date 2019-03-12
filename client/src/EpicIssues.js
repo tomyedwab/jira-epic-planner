@@ -249,6 +249,12 @@ export default function EpicIssues(props) {
     filteredIssues.forEach((issue, idx) => {
         flattenedIssues.push([false, issue.subtasks.length === 0, issue, issuePriorities[issue.key]]);
 
+        // Are all the tasks complete?
+        if (isDone(issue.status)) {
+            // If so, don't show subtasks at all
+            return;
+        }
+
         // Sort the subtasks as well
         const subtasks = issue.subtasks.slice().sort((a, b) => (issuePriorities[b.key] - issuePriorities[a.key]));
         subtasks.forEach((subissue, subidx) => {
