@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import {TEAM_MEMBER_DATA} from './static.js';
+import {TEAM_MEMBER_DATA, SPRINT_MAP} from './static.js';
 
 window.ALL_EPICS = {};
 window.ALL_ISSUES = {};
@@ -71,7 +71,24 @@ export function useJiraData(projectKey) {
                         return retain;
                     })
                 );
-                setSprints(data.sprints);
+
+                const sprints = {};
+                const filterMap = (SPRINT_MAP[projectKey] || {});
+                Object.keys(data.sprints)
+                    .filter(sprintId => !!filterMap[data.sprints[sprintId].name])
+                    .forEach(sprintId => {
+                        const [year, sprintNum] = filterMap[data.sprints[sprintId].name];
+                        const pad = (sprintNum < 10) ? "0" : "";
+                        const newName = `${year}-${pad}${sprintNum}`;
+                        sprints[sprintId] = {
+                            ...data.sprints[sprintId],
+                            name: newName,
+                            year: year,
+                            num: sprintNum,
+                        };
+                    });
+                setSprints(sprints);
+
                 setUpdateTime(new Date(data.updateTime));
                 setLoading(false);
             });

@@ -37,29 +37,29 @@ const isDone = status => {
     return (
         status === "Done" ||
         status === "Closed" ||
-        status === "Won't Fix"
+        status === "Won't Fix" ||
+        status === "Won't Do"
     );
 }
 
+// For debugging only
 const SHOW_ISSUE_PRIORITIES = false;
 
-const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
+const calcIssuePriority = (issue, sprints, activeSprintName) => {
     // TODO: Include dependencies in sort
     let priority = 0;
-    let sprints = [];
 
     // Primary sort: "Done" at the top, then current sprint, then rest
     if (isDone(issue.status)) {
         priority = 20000000;
-        sprints = sprintNames;
-    } else if (sprintNames.indexOf(activeSprintName) >= 0) {
+    } else if (sprints.map(s => s.name).indexOf(activeSprintName) >= 0) {
         priority = 10000000;
         // sprints not relevant
     } else {
         // Sort based on first upcoming sprint, unless there are none
-        sprints = sprintNames.filter(s => s > activeSprintName);
-        if (sprints.length === 0) {
-            sprints = sprintNames;
+        const filteredSprints = sprints.filter(s => s.name > activeSprintName);
+        if (filteredSprints.length > 0) {
+            sprints = filteredSprints;
         }
     }
 
@@ -70,7 +70,7 @@ const calcIssuePriority = (issue, sprintNames, activeSprintName) => {
 
     // Tertiary sort: chronological by sprint
     if (sprints.length > 0) {
-        priority += 999999 - Math.min.apply(null, sprints.map(s => +s.replace("-", "")))
+        priority += 999999 - Math.min.apply(null, sprints.map(sprint => sprint.year * 100 + sprint.num));
     }
 
     // Quaternary (?) sort: Whether the issue has been assigned
@@ -202,6 +202,7 @@ export default function EpicIssues(props) {
     let sortedSprints = (
         Object.keys(sprintsMap)
         .map(id => sprints[id])
+        .filter(s => s !== undefined)
         .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
     );
     if (sortedSprints.length === 0) {
@@ -209,23 +210,22 @@ export default function EpicIssues(props) {
         // sprint
         sortedSprints = Object.values(sprints).filter(sprint => sprint.state === "ACTIVE");
     }
-    if(sortedSprints.length < 4) {
+    if (sortedSprints.length < 4) {
         // Special-case: If there are not many sprints than add a few at the
         // end
         const orderedSprints = (
             Object.values(sprints)
             .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
         );
-        const startIdx = orderedSprints.map(sprint => sprint.name).indexOf(sortedSprints[sortedSprints.length - 1].name);
+        const startIdx = orderedSprints.map(sprint => sprint.id).indexOf(sortedSprints[sortedSprints.length - 1].id);
         sortedSprints = sortedSprints.concat(orderedSprints.slice(startIdx+1, startIdx+5));
     }
     let yearIdx = -1;
     const sortedYears = [];
     sortedSprints.forEach((sprint, idx) => {
-        const year = sprint.name.split("-")[0];
-        if (yearIdx < 0 || sortedYears[yearIdx][0] !== year) {
+        if (yearIdx < 0 || sortedYears[yearIdx][0] !== sprint.year) {
             yearIdx++;
-            sortedYears[yearIdx] = [year, idx, 1];
+            sortedYears[yearIdx] = [sprint.year, idx, 1];
         } else {
             sortedYears[yearIdx][2]++;
         }
@@ -237,8 +237,7 @@ export default function EpicIssues(props) {
 
     const issuePriorities = {};
     filteredIssues.forEach(issue => {
-        const issueSprints = issue.sprints.map(sprintId => sprints[sprintId].name);
-
+        const issueSprints = issue.sprints.map(sprintId => sprints[sprintId]).filter(s => s !== undefined);
         issuePriorities[issue.key] = calcIssuePriority(issue, issueSprints, activeSprintName);
         issue.subtasks.forEach(subtask => {
             issuePriorities[subtask.key] = calcIssuePriority(subtask, issueSprints, activeSprintName);
@@ -333,7 +332,7 @@ export default function EpicIssues(props) {
         {getSprintDateStr(sprint, true)}
     </div>);
     const header3 = sortedSprints.map((sprint, idx) => <div style={{...globalStyles.heading, gridColumn: SEND + idx, gridRow: 3}} key={"sprint-" + sprint.id}>
-        {sprint.name.split("-")[1]}
+        {sprint.num}
     </div>);
 
     return <div style={{...globalStyles.fontStyle, ...globalStyles.table, display: "flex", flexDirection: "column", position: "absolute", left: 0, right: 0, top: 0, bottom: 0}}>

@@ -28,10 +28,6 @@ import java.util.logging.Level.ALL
 
 // TODO: Auto-clear cache after some timeout
 
-// Constants for our particular project
-//val PingboardGroup = 260712
-//val ProjectFilter = "(Project=CP OR Project=IC) AND (resolved is EMPTY OR resolved >= -180d) AND (labels IS EMPTY OR labels != \\\"from-asana\\\")"
-
 @Serializable
 data class ProjectConfig(
     val ProjectName: String,
@@ -264,34 +260,42 @@ fun extractIssueSprints(issue: IssueResult, sprints: HashMap<String, Sprint>): L
         }
         val sprintIdInt = sprintId.toInt()
         if (!sprints.containsKey(sprintId)) {
+            /*
             val sprintOrigName = params.get("name") ?: ""
 
             // CP 2019
-            val re1 = Regex("^\\[CP\\] Sprint (\\d+-\\d+).*$").matchEntire(sprintOrigName)
+            val recp19 = Regex("^\\[CP\\] Sprint (\\d+-\\d+).*$").matchEntire(sprintOrigName)
             // TP 2019
-            val re2 = Regex("^TP.+ (\\d+) Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            val retp19 = Regex("^TP.+ (\\d+) Sprint (\\d+).*$").matchEntire(sprintOrigName)
             // CLASS 2019
-            val re3 = Regex("^CLASS (\\d+) .+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            val recl19 = Regex("^CLASS (\\d+) .+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            // LP 2019
+            val relp19 = Regex("^\\[TP\\] .+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
             // CP 2018
-            val re4 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
+            val recp18 = Regex("^.+ Sprint (\\d+).*$").matchEntire(sprintOrigName)
             var sprintName = when {
-                re1 != null && re1.groupValues.size > 1 -> re1.groupValues[1]
-                re2 != null && re2.groupValues.size > 2 -> sprintName(re2.groupValues[1], re2.groupValues[2])
-                re3 != null && re3.groupValues.size > 2 -> sprintName(re3.groupValues[1], re3.groupValues[2])
-                re4 != null && re4.groupValues.size > 1 -> sprintName("2018", re4.groupValues[1])
+                recp19 != null && recp19.groupValues.size > 1 -> recp19.groupValues[1]
+                retp19 != null && retp19.groupValues.size > 2 -> sprintName(retp19.groupValues[1], retp19.groupValues[2])
+                recl19 != null && recl19.groupValues.size > 2 -> sprintName(recl19.groupValues[1], recl19.groupValues[2])
+                relp19 != null && relp19.groupValues.size > 1 -> sprintName("2019", relp19.groupValues[1])
+                recp18 != null && recp18.groupValues.size > 1 -> sprintName("2018", recp18.groupValues[1])
                 else -> {
                     println("Invalid sprint name $sprintOrigName")
                     return@mapNotNull null
                 }
             } ?: return@mapNotNull null
+            */
 
-            val sprint = Sprint(
-                    id=sprintIdInt,
-                    state=params.get("state"),
-                    name=sprintName,
-                    startDate=params.get("startDate"),
-                    endDate=params.get("endDate"))
-            sprints.set(sprintId, sprint)
+            val name = params.get("name")
+            if (name != null) {
+                val sprint = Sprint(
+                        id=sprintIdInt,
+                        name=name,
+                        state=params.get("state"),
+                        startDate=params.get("startDate"),
+                        endDate=params.get("endDate"))
+                sprints.set(sprintId, sprint)
+            }
         }
 
         sprintIdInt
