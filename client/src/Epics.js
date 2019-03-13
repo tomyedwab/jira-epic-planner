@@ -140,8 +140,9 @@ const renderTeamTable = (sprint, teamMembers, globalStyles) => {
 const renderEpicTable = (issues, epicMap, selectEpic, globalStyles) => {
     let issueSubteams = {};
     issues.forEach(issue => {
-        if (issue.subteam && issue.subteam !== "Front/Backend") {
-            issueSubteams[issue.subteam] = true;
+        const subteam = (issue.subteam === "Front/Backend") ? "Frontend" : issue.subteam;
+        if (subteam) {
+            issueSubteams[subteam] = true;
         }
     });
     issueSubteams = Object.keys(issueSubteams)
