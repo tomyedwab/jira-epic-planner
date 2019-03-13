@@ -39,7 +39,6 @@ function hackSubteam(issue) {
     if (summary.indexOf("[pm]") === 0) {
         return "PM";
     }
-    console.log(summary);
     return null;
 }
 

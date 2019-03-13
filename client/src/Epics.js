@@ -6,6 +6,7 @@ import {SUBTEAM_PRIORITIES} from './static.js';
 // TODO: Company holidays
 // TODO: Highlight overcommit
 // TODO: Way to view issues in "No epic"
+// TODO: Show epic work in backlog (instead of "all epics")
 
 const renderEpic = (epic, row, selectEpic, globalStyles) => {
     return [
@@ -134,10 +135,6 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
             </span>}
         </div>
     }
-
-    console.log(sprint);
-    console.log(epicStats);
-    console.log(epicTotals);
 
     const epicRows = epicKeys.map((epicKey, idx) => {
         const stats = epicStats[epicKey];
