@@ -4,6 +4,7 @@ const TEAM_STYLES = {
     "Front/Backend": {backgroundImage: "-webkit-linear-gradient(-30deg, rgb(255, 177, 0, 0.4) 50%, rgb(55, 197, 253, 0.4) 50%)"},
     "Fullstack": {backgroundColor: "rgb(255, 177, 0, 0.4)"},
     "Design": {backgroundColor: "rgb(20, 191, 150, 0.4)"},
+    "PM": {backgroundColor: "rgb(191, 83, 20, 0.4)"},
 };
 
 const GlobalStyles = (useSmallerFont) => ({

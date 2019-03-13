@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {getSprintDateStr} from './util';
+import {SUBTEAM_PRIORITIES} from './static.js';
 
 const ISSUE_ICONS = {
     "Task": "https://khanacademy.atlassian.net/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
@@ -24,13 +25,6 @@ const ISSUE_PRIORITIES = {
     "Design": 3000000,
     "Blocked": 2000000,
     "Triage": 1000000,
-};
-
-const SUBTEAM_PRIORITIES = {
-    "Design": 0.05,
-    "Frontend": 0.04,
-    "Front/Backend": 0.03,
-    "Backend": 0.02,
 };
 
 const isDone = status => {

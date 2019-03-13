@@ -22,6 +22,27 @@ export function useMetaData(projectKey) {
     return [projectName];
 }
 
+function hackSubteam(issue) {
+    if (issue.subteam) {
+        return issue.subteam;
+    }
+    const summary = issue.summary.toLowerCase();
+    if (summary.indexOf("[be]") === 0) {
+        return "Backend";
+    }
+    if (summary.indexOf("[fe]") === 0) {
+        return "Frontend";
+    }
+    if (summary.indexOf("[des]") === 0) {
+        return "Design";
+    }
+    if (summary.indexOf("[pm]") === 0) {
+        return "PM";
+    }
+    console.log(summary);
+    return null;
+}
+
 export function useJiraData(projectKey) {
     const [reloadNum, setReloadNum] = useState(0);
     const [epics, setEpics] = useState([]);
@@ -51,6 +72,7 @@ export function useJiraData(projectKey) {
                     }).map(issue => ({
                         ...issue,
                         subtasks: issue.subtasks.map(issueKey => window.ALL_ISSUES[issueKey]),
+                        subteam: hackSubteam(issue),
                     })).filter(issue => {
                         if (issue.type === "Epic" || issue.type === "Sub-task") {
                             return false;
