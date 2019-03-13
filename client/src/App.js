@@ -8,12 +8,18 @@ import GlobalStyles from './styles.js';
 // Very simple path-based router
 function useLocation(cb) {
     useEffect(() => {
+        // Hard-code some redirects because CP is already linking to some of these and I don't want to update all the URLs
+        if (window.location.pathname === "/") {
+            window.location.assign("/CP/");
+        } else if (window.location.pathname.substr(0, 4) === "/CP-") {
+            window.location.assign(`/CP${window.location.pathname}`);
+        }
+
         window.addEventListener('popstate', () => cb(window.location.pathname));
     });
     useEffect(() => {
         cb(window.location.pathname);
     });
-
 
     return path => {
         window.history.pushState(null, null, path);
