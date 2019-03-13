@@ -449,6 +449,7 @@ fun main(args: Array<String>) {
                 staticRootFolder = File("client/build")
                 default("index.html")
                 file("*", "index.html")
+                secrets.ProjectConfigs.keys.forEach { projectKey -> file("${projectKey}/*", "index.html")}
 
                 static("static") {
                     static("js") {
