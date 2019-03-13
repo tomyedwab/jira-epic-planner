@@ -6,22 +6,6 @@ import {SUBTEAM_PRIORITIES} from './static.js';
 // TODO: Highlight overcommit
 // TODO: Way to view issues in "No epic"
 
-const renderEpic = (epic, row, selectEpic, globalStyles) => {
-    return [
-        <div style={{gridColumn: 1, gridRow: row + 1}} key={epic.key + "::1"}>
-            {epic.shortName}
-        </div>,
-        <div style={{gridColumn: 2, gridRow: row + 1}} key={epic.key + "::2"}>
-            <a href={`/${epic.key}`} onClick={e => { selectEpic(); e.preventDefault(); }} style={globalStyles.jiraLink}>
-                {epic.key}
-            </a>
-        </div>,
-        <div style={{gridColumn: 3, gridRow: row + 1}} key={epic.key + "::3"}>
-            {epic.summary}
-        </div>,
-    ];
-};
-
 const getOOOOverlap = (memberOOOs, sprintDays) => {
     const OOOs = [];
     let total = 0;
