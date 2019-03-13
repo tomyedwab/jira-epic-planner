@@ -1,12 +1,10 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {getSprintDateStr, getSprintDays, shortDate} from './util';
 import {SUBTEAM_PRIORITIES} from './static.js';
 
-// TODO: This file needs cleanup
 // TODO: Company holidays
 // TODO: Highlight overcommit
 // TODO: Way to view issues in "No epic"
-// TODO: Show epic work in backlog (instead of "all epics")
 
 const renderEpic = (epic, row, selectEpic, globalStyles) => {
     return [
@@ -48,8 +46,13 @@ const getOOOOverlap = (memberOOOs, sprintDays) => {
     return [OOOs, total];
 };
 
-const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalStyles) => {
-    // Get possible teams
+const renderPts = points => (points > 0) ? `${Math.round(points)} pts` : "-";
+
+const renderTeamTable = (sprint, teamMembers, globalStyles) => {
+    // Get the days in the sprint
+    const sprintDays = getSprintDays(sprint);
+
+    // Get possible subteams
     let teamSubteams = {};
     teamMembers.forEach(teamMember => {
         if (teamMember.team) {
@@ -58,108 +61,6 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
     });
     teamSubteams = Object.keys(teamSubteams)
         .sort((a, b) => SUBTEAM_PRIORITIES[b] - SUBTEAM_PRIORITIES[a]);
-
-    let issueSubteams = {};
-    issues.forEach(issue => {
-        if (issue.subteam && issue.subteam !== "Front/Backend") {
-            issueSubteams[issue.subteam] = true;
-        }
-    });
-    issueSubteams = Object.keys(issueSubteams)
-        .sort((a, b) => SUBTEAM_PRIORITIES[b] - SUBTEAM_PRIORITIES[a])
-        .concat(["Untagged"]);
-
-    const sprintDays = getSprintDays(sprint);
-
-    const epicStats = {};
-    const epicTotals = {
-        totalPoints: 0,
-    };
-    issueSubteams.forEach(team => epicTotals[team] = {points: 0});
-
-    issues.forEach(issue => {
-        const epic = issue.epic || "";
-        if (!epicStats[epic]) {
-            epicStats[epic] = {
-                count: 0,
-                totalPoints: 0,
-            };
-            issueSubteams.forEach(team => epicStats[epic][team] = {unknown: 0, points: 0, jiras: []});
-        }
-        epicStats[epic].count += 1;
-
-        let estimate = issue.estimate;
-        let unestimated = 0;
-        if (estimate === null) {
-            estimate = 0;
-            
-            if (issue.subtasks.length > 0) {
-                issue.subtasks.forEach(subtask => {
-                    if (subtask.estimate !== null) {
-                        estimate += subtask.estimate;
-                    } else {
-                        unestimated += 1;
-                    }
-                })
-            } else {
-                unestimated += 1;
-            }
-        }
-
-        const team = (issue.subteam === "Front/Backend") ? "Frontend" : (issue.subteam || "Untagged");
-        epicStats[epic][team].points += estimate;
-        epicStats[epic][team].totalPoints += estimate;
-        epicStats[epic][team].unknown += unestimated;
-        if (unestimated > 0) {
-            epicStats[epic][team].jiras.push(issue.key);
-        }
-        epicTotals[team].points += estimate;
-        epicTotals.totalPoints += estimate;
-    });
-
-    const epicKeys = Object.keys(epicStats);
-    epicKeys.sort((a, b) => (
-        (epicStats[b].totalPoints - (b === "" ? 9999 : 0)) -
-        (epicStats[a].totalPoints - (a === "" ? 9999 : 0))));
-
-    const renderPts = points => (points > 0) ? `${Math.round(points)} pts` : "-";
-
-    const renderTeamPts = (teamStats, team, column, idx) => {
-        if (!teamStats.points && !teamStats.unknown) {
-            return null;
-        }
-        return <div style={{...globalStyles.team(team), gridColumn: column, gridRow: 2+idx, textAlign: "center"}}>
-            {`${Math.round(teamStats.points)} pts`}
-            {teamStats.unknown > 0 && <span style={{color: "#c00"}} title={teamStats.jiras.join(", ")}>
-                {" + " + teamStats.unknown + " tasks"}
-            </span>}
-        </div>
-    }
-
-    const epicRows = epicKeys.map((epicKey, idx) => {
-        const stats = epicStats[epicKey];
-        const epic = epicMap[epicKey] || {shortName: "-- No epic --", key: null};
-        return [
-            <div style={{...globalStyles.tableRow(idx), gridColumnStart: 1, gridColumnEnd: issueSubteams.length + 3, gridRow: 2+idx}} />,
-            <div style={{gridColumn: 1, gridRow: 2+idx}}>
-                {epic.shortName}
-            </div>,
-            epic.key && <div style={{gridColumn: 2, gridRow: 2+idx}}>
-                <a href={`/${epic.key}`} onClick={e => { selectEpic(epic); e.preventDefault(); }} style={globalStyles.jiraLink}>
-                    {epic.key}
-                </a>
-            </div>,
-        ].concat(issueSubteams.map((team, teamIdx) => renderTeamPts(stats[team], team, 3 + teamIdx, idx)));
-    });
-
-    const totals = [
-        <div style={{...globalStyles.tableRow(epicKeys.length), ...styles.finalRow, gridColumnStart: 1, gridColumnEnd: issueSubteams.length + 3, gridRow: 2+epicKeys.length}} />,
-        <div style={{gridColumn: 1, gridRow: 2+epicKeys.length, fontWeight: "bold"}}>
-            Total committed
-        </div>,
-    ].concat(issueSubteams.map((team, teamIdx) => <div style={{...globalStyles.team(team), gridColumn: 3+teamIdx, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
-        {renderPts(epicTotals[team].points)}
-    </div>));
 
     const teamTotals = {};
     teamSubteams.forEach(team => teamTotals[team] = 0);
@@ -242,6 +143,129 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
         {renderPts(teamTotals[team])}
     </div>));
 
+    return <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `160px 220px repeat(${teamSubteams.length}, 120px) 100px auto`, marginLeft: 12}}>
+        {teamSubteams.map((team, teamIdx) => <div style={{...globalStyles.heading, gridColumn: 3+teamIdx, gridRow: 1, textAlign: "center"}}>
+            {team}
+        </div>)}
+
+        {teamRows}
+        {teamTotalRow}
+    </div>;
+}
+
+const renderEpicTable = (issues, epicMap, selectEpic, globalStyles) => {
+    let issueSubteams = {};
+    issues.forEach(issue => {
+        if (issue.subteam && issue.subteam !== "Front/Backend") {
+            issueSubteams[issue.subteam] = true;
+        }
+    });
+    issueSubteams = Object.keys(issueSubteams)
+        .sort((a, b) => SUBTEAM_PRIORITIES[b] - SUBTEAM_PRIORITIES[a])
+        .concat(["Untagged"]);
+
+    const epicStats = {};
+    const epicTotals = {
+        totalPoints: 0,
+    };
+    issueSubteams.forEach(team => epicTotals[team] = {points: 0});
+
+    issues.forEach(issue => {
+        let epic = issue.epic || "";
+        if (!epicMap[epic]) {
+            epic = "";
+        }
+        if (!epicStats[epic]) {
+            epicStats[epic] = {
+                count: 0,
+                totalPoints: 0,
+            };
+            issueSubteams.forEach(team => epicStats[epic][team] = {unknown: 0, points: 0, jiras: []});
+        }
+        epicStats[epic].count += 1;
+
+        let estimate = issue.estimate;
+        let unestimated = 0;
+        if (estimate === null) {
+            estimate = 0;
+            
+            if (issue.subtasks.length > 0) {
+                issue.subtasks.forEach(subtask => {
+                    if (subtask.estimate !== null) {
+                        estimate += subtask.estimate;
+                    } else {
+                        unestimated += 1;
+                    }
+                })
+            } else {
+                unestimated += 1;
+            }
+        }
+
+        const team = (issue.subteam === "Front/Backend") ? "Frontend" : (issue.subteam || "Untagged");
+        epicStats[epic][team].points += estimate;
+        epicStats[epic][team].totalPoints += estimate;
+        epicStats[epic][team].unknown += unestimated;
+        if (unestimated > 0) {
+            epicStats[epic][team].jiras.push(issue.key);
+        }
+        epicTotals[team].points += estimate;
+        epicTotals.totalPoints += estimate;
+    });
+
+    const epicKeys = Object.keys(epicStats);
+    epicKeys.sort((a, b) => (
+        (epicStats[b].totalPoints - (b === "" ? 9999 : 0)) -
+        (epicStats[a].totalPoints - (a === "" ? 9999 : 0))));
+
+    const renderTeamPts = (teamStats, team, column, idx) => {
+        if (!teamStats.points && !teamStats.unknown) {
+            return null;
+        }
+        return <div style={{...globalStyles.team(team), gridColumn: column, gridRow: 2+idx, textAlign: "center"}}>
+            {`${Math.round(teamStats.points)} pts`}
+            {teamStats.unknown > 0 && <span style={{color: "#c00"}} title={teamStats.jiras.join(", ")}>
+                {" + " + teamStats.unknown + " tasks"}
+            </span>}
+        </div>
+    }
+
+    const epicRows = epicKeys.map((epicKey, idx) => {
+        const stats = epicStats[epicKey];
+        const epic = epicMap[epicKey] || {shortName: "-- No epic --", key: null};
+        return [
+            <div style={{...globalStyles.tableRow(idx), gridColumnStart: 1, gridColumnEnd: issueSubteams.length + 3, gridRow: 2+idx}} />,
+            <div style={{gridColumn: 1, gridRow: 2+idx}}>
+                {epic.shortName}
+            </div>,
+            epic.key && <div style={{gridColumn: 2, gridRow: 2+idx}}>
+                <a href={`/${epic.key}`} onClick={e => { selectEpic(epic); e.preventDefault(); }} style={globalStyles.jiraLink}>
+                    {epic.key}
+                </a>
+            </div>,
+        ].concat(issueSubteams.map((team, teamIdx) => renderTeamPts(stats[team], team, 3 + teamIdx, idx)));
+    });
+
+    const totals = [
+        <div style={{...globalStyles.tableRow(epicKeys.length), ...styles.finalRow, gridColumnStart: 1, gridColumnEnd: issueSubteams.length + 3, gridRow: 2+epicKeys.length}} />,
+        <div style={{gridColumn: 1, gridRow: 2+epicKeys.length, fontWeight: "bold"}}>
+            Total committed
+        </div>,
+    ].concat(issueSubteams.map((team, teamIdx) => <div style={{...globalStyles.team(team), gridColumn: 3+teamIdx, gridRow: 2+epicKeys.length, fontWeight: "bold", textAlign: "center"}}>
+        {renderPts(epicTotals[team].points)}
+    </div>));
+
+    return <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `300px 80px repeat(${issueSubteams.length}, 120px) 100px auto`, marginLeft: 12, paddingTop: 24}}>
+        {issueSubteams.map((team, teamIdx) => <div style={{...globalStyles.heading, gridColumn: 3+teamIdx, gridRow: 1, textAlign: "center"}}>
+            {team}
+        </div>)}
+
+        {epicRows}
+        {totals}
+    </div>;
+}
+
+const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalStyles) => {
     return <div style={{...globalStyles.fontStyle, margin: 8, padding: 16, display: "inline-block", border: "1px solid rgba(0, 0, 0, 25%)", borderRadius: 12}}>
         <div style={{display: "flex"}}>
             <div style={{flex: "1 0 auto"}}>
@@ -254,42 +278,35 @@ const renderSprint = (sprint, epicMap, issues, selectEpic, teamMembers, globalSt
             </div>
         </div>
 
-        <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `160px 220px repeat(${teamSubteams.length}, 120px) 100px auto`, marginLeft: 12}}>
-            {teamSubteams.map((team, teamIdx) => <div style={{...globalStyles.heading, gridColumn: 3+teamIdx, gridRow: 1, textAlign: "center"}}>
-                {team}
-            </div>)}
+        {renderTeamTable(sprint, teamMembers, globalStyles)}
 
-            {teamRows}
-            {teamTotalRow}
-        </div>
-
-        <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `300px 80px repeat(${issueSubteams.length}, 120px) 100px auto`, marginLeft: 12, paddingTop: 24}}>
-            {issueSubteams.map((team, teamIdx) => <div style={{...globalStyles.heading, gridColumn: 3+teamIdx, gridRow: 1, textAlign: "center"}}>
-                {team}
-            </div>)}
-
-            {epicRows}
-            {totals}
-        </div>
-
+        {renderEpicTable(issues, epicMap, selectEpic, globalStyles)}
     </div>
 };
 
 export default function Epics(props) {
     const {projectName, epics, issues, sprints, jiraLoading, forceReload, teamMembers, pingLoading, forcePingReload, globalStyles} = props;
+    const [showCompleted, setShowCompleted] = useState(false);
 
     const orderedSprints = (
         Object.values(sprints)
         .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
     );
     const activeSprintIdx = orderedSprints.map(sprint => sprint.state).indexOf("ACTIVE");
-    const filteredSprints = orderedSprints.slice(Math.max(0, activeSprintIdx - 1));
+    const filteredSprints = (activeSprintIdx < 0 || showCompleted) ? orderedSprints : orderedSprints.slice(activeSprintIdx);
 
     const epicMap = {};
     epics.forEach(epic => epicMap[epic.key] = epic);
 
+    const backlogIssues = issues.filter(issue => issue.sprints.length === 0);
+
     return <div>
         <div style={{...globalStyles.pageTitle, marginLeft: 10, marginTop: 8}}>Project {projectName}</div>
+
+        <div>
+            <input type="checkbox" checked={showCompleted} onClick={() => setShowCompleted(!showCompleted)} />
+            <label>Show completed sprints</label>
+        </div>
 
         {filteredSprints.map(sprint => (
             renderSprint(
@@ -300,12 +317,20 @@ export default function Epics(props) {
                 globalStyles,
             )
         ))}
-        <div style={{...globalStyles.fontStyle, padding: 8}}>
-            <div style={globalStyles.pageTitle}>All epics</div>
-            <div style={{...globalStyles.table, display: "grid", gridTemplateColumns: `300px 80px auto`, marginLeft: 12}}>
-                {epics.map((epic, row) => renderEpic(epic, row, () => props.selectEpic(epic), globalStyles))}
+
+        <div style={{ ...globalStyles.fontStyle, margin: 8, padding: 16, display: "inline-block", border: "1px solid rgba(0, 0, 0, 25%)", borderRadius: 12 }}>
+            <div style={{ display: "flex" }}>
+                <div style={{ flex: "1 0 auto" }}>
+                    <div style={globalStyles.pageTitle}>Backlog</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                    <div style={globalStyles.issueCount}>{backlogIssues.length} issues</div>
+                </div>
             </div>
+
+            {renderEpicTable(backlogIssues, epicMap, props.selectEpic, globalStyles)}
         </div>
+
         <p>
             {jiraLoading ? "Loading epics..." : `${epics.length} epics loaded. `}
             {!jiraLoading && <button onClick={forceReload}>Reload</button>}
