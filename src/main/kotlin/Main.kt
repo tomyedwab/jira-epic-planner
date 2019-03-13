@@ -449,6 +449,9 @@ fun main(args: Array<String>) {
                 staticRootFolder = File("client/build")
                 default("index.html")
                 file("*", "index.html")
+                file("/favicon-16x16.png", "favicon-16x16.png")
+                file("/favicon-32x32.png", "favicon-32x32.png")
+                file("/favicon-64x64.png", "favicon-64x64.png")
                 secrets.ProjectConfigs.keys.forEach { projectKey -> file("${projectKey}/*", "index.html")}
 
                 static("static") {

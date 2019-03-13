@@ -39,5 +39,6 @@ COPY --from=gradle-host /app/build/libs/main.jar /app/
 
 COPY --from=node /client/build/static /app/client/build/static
 COPY --from=node /client/build/index.html /app/client/build/
+COPY --from=node /client/build/*.png /app/client/build/
 
 CMD ["java", "main.kotlin.MainKt"]
